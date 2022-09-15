@@ -1,0 +1,25 @@
+seed: 1
+record_video: yes # yes
+
+environment:
+  render: True
+# just testing commenting
+  num_envs: 1 # 800
+  eval_every_n: 200
+  num_threads: 1 #30
+  simulation_dt: 0.0025 #0.002
+  control_dt: 0.033
+  max_time: 100.0
+  reward:
+    orientation:
+      coeff: 0.85 # 0.65
+    angular velocity:
+      coeff: 0.15 # 0.1
+    # end effector:
+    #   coeff: 0.15
+    # com position:
+    #   coeff: 0.1
+
+architecture:
+  policy_net: [128, 128]
+  value_net: [128, 128]
