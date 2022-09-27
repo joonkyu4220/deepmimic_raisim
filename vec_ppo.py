@@ -149,7 +149,6 @@ class RL(object):
        #print(self.model.state_dict())
  
    def run_test_with_noise(self, num_test=10):
- 
        reward_mean = statistics.mean(self.total_rewards)
        reward_std = statistics.stdev(self.total_rewards)
        #print(reward_mean, reward_std, self.total_rewards)
@@ -190,7 +189,7 @@ class RL(object):
        # plt.savefig("test.png")
  
    def collect_samples_vec(self, num_samples, start_state=None, noise=-2.5, env_index=0, random_seed=1):
- 
+    #    print("COLLECT SAMPLES..")
        start_state = self.env.observe()
        samples = 0
        done = False
@@ -231,6 +230,7 @@ class RL(object):
            samples += 1
  
            self.env.reset_time_limit()
+        #    print(f"{samples}/{num_samples} samples collected")
        print("sim time", time.time() - start)
        start = time.time()
        counter = num_samples - 1
@@ -320,11 +320,11 @@ class RL(object):
  
    def collect_samples_multithread(self):
        import time
-       self.num_envs = 800
+       self.num_envs = 1 # 800
        self.start = time.time()
        self.lr = 1e-3
        self.weight = 10
-       num_threads = 1
+       num_threads = 1 # 30
        self.num_samples = 0
        self.time_passed = 0
        score_counter = 0
@@ -347,6 +347,7 @@ class RL(object):
            print(self.model_name)
            while self.storage.counter < max_samples:
                self.collect_samples_vec(100, noise=noise)
+            #    print(f"{self.storage.counter}/{max_samples}")
            start = time.time()
 
            self.update_critic(max_samples//4, 20)
@@ -380,7 +381,7 @@ def mkdir(base, name):
 if __name__ == '__main__':
    import json
    from ruamel.yaml import YAML, dump, RoundTripDumper
-   from raisimGymTorch.env.bin import soccer_juggle_release
+   from raisimGymTorch.env.bin import deepmimic
    from raisimGymTorch.env.RaisimGymVecEnv import RaisimGymVecTorchEnv as VecEnv
    from raisimGymTorch.helper.raisim_gym_helper import ConfigurationSaver, load_param, tensorboard_launcher
  
@@ -409,14 +410,14 @@ if __name__ == '__main__':
    cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
 
    # create environment from the configuration file
-   env = VecEnv(soccer_juggle_release.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
+   env = VecEnv(deepmimic.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
    print("env_created")
    env.setTask()
    ppo = RL(env, [128, 128])
  
    ppo.base_dim = ppo.num_inputs
  
-   ppo.model_name = task_path + "/stats/test/"
+   ppo.model_name = task_path + "/stats/action_raw/"
    training_start = time.time()
    ppo.collect_samples_multithread()
    print("training time", time.time()-training_start)

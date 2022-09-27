@@ -7,7 +7,7 @@ environment:
   num_envs: 1 # 800
   eval_every_n: 200
   num_threads: 1 #30
-  simulation_dt: 0.0025 #0.002
+  simulation_dt: 0.002 #0.0025
   control_dt: 0.033
   max_time: 100.0
   reward:
