@@ -1,1 +1,5 @@
+observation: as in DeepMimic but no normalization
+action: elementwise displacement of PD controller target angles, represented in quaternions
+reward: only orientation reward (no velocity reward, COM reward, end-effector reward)
 
+termination condition: root height below 0.6
