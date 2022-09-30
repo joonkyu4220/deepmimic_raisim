@@ -408,7 +408,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     }
     orn_reward = exp(-2 * orn_err);
 
-    ball_dist = obDouble_[136] * obDouble_[136] + obDouble_[137] + obDouble_[137];
+    ball_dist = (ball_gc_[0] - gc_[0]) * (ball_gc_[0] - gc_[0]) + (ball_gc_[1] - gc_[1]) * (ball_gc_[1] - gc_[1]);
     ball_dist_reward = exp(-ball_dist);
 
     if (ground_hand_) {
@@ -418,6 +418,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     rewards_.record("orientation", orn_reward);
     rewards_.record("ball distance", ball_dist_reward);
+    rewards_.record("dribble", dribble_reward);
 
     // TODO
     // vel_err += (gv_.segment(6, gvDim_ - 6) - gv_ref_.segment(6, gvDim_ - 6)).squaredNorm();
