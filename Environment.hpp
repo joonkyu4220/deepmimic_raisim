@@ -39,6 +39,7 @@ class ENVIRONMENT : public RaisimGymEnv {
       // friction, restitution, resThreshold
       // TODO
       world_->setMaterialPairProp("default",  "ball", 1.0, 0.8, 0.0001);
+      // world_->setMaterialPairProp("default",  "ball", 1.0, 0.0, 0.0001);
       world_->setMaterialPairProp("default", "steel", 5.0, 0.0, 0.0001);
       world_->setMaterialPairProp("ball", "steel", 5.0, 0.85, 0.0001);
       
@@ -46,7 +47,7 @@ class ENVIRONMENT : public RaisimGymEnv {
       ball_ = world_->addArticulatedSystem(resourceDir_ + "/ball3D.urdf");
       ball_->setIntegrationScheme(raisim::ArticulatedSystem::IntegrationScheme::RUNGE_KUTTA_4);
 
-      ball_gc_init_.setZero(7); ball_gc_init_[1] = 10; ball_gc_init_[2] = 10; ball_gc_init_[3] = 1; // put away the ball for now
+      ball_gc_init_.setZero(7); ball_gc_init_[1] = 10; ball_gc_init_[2] = 1.5; ball_gc_init_[3] = 1; // put away the ball for now
       ball_gv_init_.setZero(6);
       ball_->setState(ball_gc_init_, ball_gv_init_);
 
@@ -54,10 +55,10 @@ class ENVIRONMENT : public RaisimGymEnv {
       ball_gv_.setZero(6);
 
       // ball radius: 0.11, hand radius 0.04
-      ball_gc_ref_.setZero(7); ball_gc_ref_[1] = 10; ball_gc_ref_[2] = 10; ball_gc_ref_[3] = 1; // put away the ball for now
+      ball_gc_ref_.setZero(7); ball_gc_ref_[1] = 10; ball_gc_ref_[2] = 1.5; ball_gc_ref_[3] = 1; // put away the ball for now
       ball_gv_ref_.setZero(6);
 
-      pTarget_.setZero(gcDim_); pTarget_[2] = 0.95; pTarget_[3] = 0.707; pTarget_[4] = 0.707;
+      pTarget_.setZero(gcDim_);
       vTarget_.setZero(gvDim_); 
       
       gc_ref_.setZero(gcDim_);
@@ -71,20 +72,20 @@ class ENVIRONMENT : public RaisimGymEnv {
       read_data();
 
       gc_init_ <<
-        0, 0, 1.707, // root pos
-        0.707, 0.707, 0, 0, // root orn
-        1, 0, 0, 0, // chest
-        1, 0, 0, 0, // neck
-        1, 0, 0, 0, // right shoulder
-        0, // right elbow
-        1, 0, 0, 0, // left shoulder
-        0, // left elbow
-        1, 0, 0, 0, // right hip
-        0, // right knee
-        1, 0, 0, 0, // right ankle
-        1, 0, 0, 0, // left hip
-        0, // left knee
-        1, 0, 0, 0; // left ankle
+        0, 0, 1.707, // root pos 0
+        0.707, 0.707, 0, 0, // root orn 3
+        1, 0, 0, 0, // chest 7
+        1, 0, 0, 0, // neck 11
+        1, 0, 0, 0, // right shoulder 15
+        0, // right elbow 19
+        1, 0, 0, 0, // left shoulder 20
+        0, // left elbow 24
+        1, 0, 0, 0, // right hip 25
+        0, // right knee 29
+        1, 0, 0, 0, // right ankle 30
+        1, 0, 0, 0, // left hip 34
+        0, // left knee 38
+        1, 0, 0, 0; // left ankle 39
       gc_ref_ <<
         0, 0, 1.707, // root pos
         0.707, 0.707, 0, 0, // root orn
@@ -104,6 +105,8 @@ class ENVIRONMENT : public RaisimGymEnv {
       Eigen::VectorXd jointPgain(gvDim_), jointDgain(gvDim_); // 34 = 3 + 3 + 3 + 3 + 3 + 1 + 3 + 1 + 3 + 1 + 3 + 3 + 1 + 3
       jointPgain.setZero(); jointPgain.tail(nJoints_).setConstant(250.0);
       jointDgain.setZero(); jointDgain.tail(nJoints_).setConstant(25.);
+      // jointPgain.setZero(); jointPgain.tail(gvDim_).setConstant(250.0);
+      // jointDgain.setZero(); jointDgain.tail(gvDim_).setConstant(25.);
       jointPgain.segment(9, 3).setConstant(50.0); jointDgain.segment(9, 3).setConstant(5.0); // neck
       // NOTE: REDUNDANT
       // jointPgain.segment(12, 8).setConstant(100.0); jointDgain.segment(12, 8).setConstant(10.0); // right shoulder, elbow, left shoulder, elbow
@@ -113,19 +116,20 @@ class ENVIRONMENT : public RaisimGymEnv {
       character_->setPdGains(jointPgain, jointDgain);
       character_->setGeneralizedForce(Eigen::VectorXd::Zero(gvDim_));
 
-      obDim_ = 137;
-      // (3 * 12) + (3 * 12) + (4 * 8 + 1 * 4) + (3 * 8 + 1 * 4) + 1;
+      obDim_ = 143;
+      // (3 * 12) + (3 * 12) + (4 * 8 + 1 * 4) + (3 * 8 + 1 * 4) + 3 + 3 + 1
       // (all in character base frame)
       // joint positions,
       // joint linear velocities, 
       // joint orientations,
       // joint angular velocities,
+      // ball pos and vel
       // phase variable
       obDouble_.setZero(obDim_);
 
       actionDim_ = gcDim_;
 
-      // TODO: observation and state
+      // TODO: how are observation and state different?
       stateDim_ = gcDim_ + 7;
       stateDouble_.setZero(stateDim_ * 2);
 
@@ -174,10 +178,14 @@ class ENVIRONMENT : public RaisimGymEnv {
     // index_ = 0; // fixed state initialization
     phase_ = index_ * phase_speed_;
     gc_ref_.segment(0, gcDim_) = data_gc_.row(index_);
-    pTarget_ << gc_ref_;
     
+    // right arm higher? 
+    gc_ref_[19] = 1.7;
+
+    pTarget_ << gc_ref_;
+
     // TODO
-    gv_ref_.segment(0, gvDim_) = data_gv_.row(index_);
+    // gv_ref_.segment(0, gvDim_) = data_gv_.row(index_);
     character_->setState(gc_ref_, gv_ref_);
     // BALL POS INITIALIZATION
     Vec<3> right_hand_pos;
@@ -189,14 +197,17 @@ class ENVIRONMENT : public RaisimGymEnv {
     // std::cout << right_hand_pos << std::endl;
     ball_gc_init_[0] = right_hand_pos[0];
     ball_gc_init_[1] = right_hand_pos[1];
-    ball_gc_init_[2] = right_hand_pos[2] - 0.15; // ball 0.11, hand 0.04
+    ball_gc_init_[2] = right_hand_pos[2] - 0.151; // ball 0.11, hand 0.04
     // ball_gc_init_[1] = right_hand_pos[1] + 5;
     // ball_gc_init_[2] = right_hand_pos[2] + 10; // ball 0.11, hand 0.04
+
+    ball_gv_init_[2] = 0.05;
 
     ball_->setState(ball_gc_init_, ball_gv_init_);
 
     from_ground_ = false;
     from_hand_ = false;
+    ground_hand_ = false;
 
     contact_terminal_flag_ = false;
 
@@ -250,8 +261,16 @@ class ENVIRONMENT : public RaisimGymEnv {
         obIdx += 3; gvIdx += 3;
       }
       // std::cout << "OBIDX" << obIdx << std::endl;
-      obDouble_.tail(1) << phase_;
     }
+    
+    // relative ball pos vel
+    matvecmul(rootRotInv, ball_gc_.head(3) - rootPos.e(), jointPos_B);
+    matvecmul(rootRotInv, ball_gv_.head(3), jointVel_B);
+    obDouble_.segment(obIdx, 3) = jointPos_B.e();
+    obIdx += 3;
+    obDouble_.segment(obIdx, 3) = jointVel_B.e();
+
+    obDouble_.tail(1) << phase_;
     // std::cout << "OB" << std::endl;
     // std::cout << obDouble_ << std::endl;
   }
@@ -284,6 +303,15 @@ class ENVIRONMENT : public RaisimGymEnv {
       }
     }
 
+    // PD controller of a floating joint?
+    // pTarget_[0] = 20000;
+    // pTarget_[1] = 0;
+    // pTarget_[2] = 0;
+    // pTarget_[3] = 1;
+    // pTarget_[4] = 0;
+    // pTarget_[5] = 0;
+    // pTarget_[6] = 0;
+
     character_->setPdTarget(pTarget_, vTarget_);
 
     for (int i = 0; i < int(control_dt_ / simulation_dt_ + 1e-10); i++)
@@ -293,8 +321,6 @@ class ENVIRONMENT : public RaisimGymEnv {
       // character_->setGeneralizedForce(Eigen::VectorXd::Zero(gvDim_));
       world_->integrate();
       if (server_) server_->unlockVisualizationServerMutex();
-
-
 
       for(auto& contact: ball_->getContacts()){
         if(contact.getPosition()[2] < 0.01)
@@ -311,9 +337,12 @@ class ENVIRONMENT : public RaisimGymEnv {
           auto& pair_contact = world_->getObject(contact.getPairObjectIndex())->getContacts()[contact.getPairContactIndexInPairObject()];
           if (character_->getBodyIdx("right_elbow") == pair_contact.getlocalBodyIndex()){
             // std::cout << "RIGHT HAND" << std::endl;
-            if (from_hand_) {
-              contact_terminal_flag_ = true;
-              break;
+            // if (from_hand_) {
+            //   contact_terminal_flag_ = true;
+            //   break;
+            // }
+            if (from_ground_) {
+              ground_hand_ = true;
             }
             from_ground_ = false;
             from_hand_ = true;
@@ -325,13 +354,7 @@ class ENVIRONMENT : public RaisimGymEnv {
           }
         }
       }
-
-
-
-
     }
-
-
 
     index_ += 1;
     phase_ += phase_speed_;
@@ -354,7 +377,9 @@ class ENVIRONMENT : public RaisimGymEnv {
     // velocity reward
     // end effector position reward
     // center of mass position reward
-    double orn_err = 0, orn_reward = 0, vel_err = 0, vel_reward = 0; // , ee_reward = 0, com_reward = 0
+    double orn_err = 0, orn_reward = 0; // , vel_err = 0, vel_reward = 0; ee_reward = 0, com_reward = 0
+    double ball_dist = 0, ball_dist_reward = 0;
+    double dribble_reward = 0;
 
     Vec<4> quat, quat_ref, quat_err;
     Mat<3,3> mat, mat_ref, mat_err;
@@ -383,7 +408,16 @@ class ENVIRONMENT : public RaisimGymEnv {
     }
     orn_reward = exp(-2 * orn_err);
 
+    ball_dist = obDouble_[136] * obDouble_[136] + obDouble_[137] + obDouble_[137];
+    ball_dist_reward = exp(-ball_dist);
+
+    if (ground_hand_) {
+      dribble_reward += 1;
+      ground_hand_ = false;
+    }
+
     rewards_.record("orientation", orn_reward);
+    rewards_.record("ball distance", ball_dist_reward);
 
     // TODO
     // vel_err += (gv_.segment(6, gvDim_ - 6) - gv_ref_.segment(6, gvDim_ - 6)).squaredNorm();
@@ -413,15 +447,23 @@ class ENVIRONMENT : public RaisimGymEnv {
   bool isTerminalState(float& terminalReward) final {
     // low root height
     if (gc_[2] < 0.6) {
-      // std::cout << "LOW ROOT" << std::endl;
+      // std::cout << "LOW ROOT FLAG" << std::endl;
       return true;
     }
 
     if (contact_terminal_flag_) {
+      // std::cout << "CONTACT FLAG" << std::endl;
       return true;
     }
 
-    if (ball_gc_[2] > 2.0){
+    if (ball_gc_[2] > 1.5){
+      // std::cout << "BALL HEIGHT FLAG" << std::endl;
+      return true;
+    }
+
+    if ((ball_gc_[0] - gc_[0]) * (ball_gc_[0] - gc_[0]) + (ball_gc_[1] - gc_[1]) * (ball_gc_[1] - gc_[1]) > 1)
+    {
+      // BALL TOO FAR
       return true;
     }
 
@@ -457,8 +499,9 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     bool contact_terminal_flag_ = false;
 
-    bool from_ground_ = true;
-    bool from_hand_ = true;
+    bool from_ground_ = false;
+    bool from_hand_ = false;
+    bool ground_hand_ = false;
 
 };
 

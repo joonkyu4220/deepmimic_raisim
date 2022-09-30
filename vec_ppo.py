@@ -320,7 +320,7 @@ class RL(object):
  
    def collect_samples_multithread(self):
        import time
-       self.num_envs = 1 # 800
+       self.num_envs = 800 # 800
        self.start = time.time()
        self.lr = 1e-3
        self.weight = 10
@@ -417,7 +417,11 @@ if __name__ == '__main__':
  
    ppo.base_dim = ppo.num_inputs
  
-   ppo.model_name = task_path + "/stats/action_raw/"
+   ppo.model_name = task_path + "/stats/20220930_ball_dist_reward/"
+   
+   if not(os.path.isdir(ppo.model_name)):
+      os.mkdir(ppo.model_name)
+
    training_start = time.time()
    ppo.collect_samples_multithread()
    print("training time", time.time()-training_start)
