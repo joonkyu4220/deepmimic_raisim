@@ -75,7 +75,8 @@ class RL(object):
        self.hidden_layer = hidden_layer
  
        self.params = Params()
-       self.Net = ActorCriticNetMann
+    #    self.Net = ActorCriticNetMann
+       self.Net = ActorCriticNet
        self.model = self.Net(self.num_inputs, self.num_outputs, self.hidden_layer)
        self.model.share_memory()
        self.test_mean = []
@@ -417,7 +418,7 @@ if __name__ == '__main__':
  
    ppo.base_dim = ppo.num_inputs
  
-   ppo.model_name = task_path + "/stats/20220930_dribblereward/"
+   ppo.model_name = task_path + "/stats/20221002_walk/"
    
    if not(os.path.isdir(ppo.model_name)):
       os.mkdir(ppo.model_name)
