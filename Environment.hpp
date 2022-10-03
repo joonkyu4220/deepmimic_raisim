@@ -178,7 +178,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     gc_ref_.segment(0, gcDim_) = data_gc_.row(index_);
     
     // right arm higher? 
-    gc_ref_[19] = 1.7;
+    // gc_ref_[19] = 1.7;
 
     pTarget_ << gc_ref_;
 
