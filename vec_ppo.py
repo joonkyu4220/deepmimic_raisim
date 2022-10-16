@@ -396,7 +396,7 @@ if __name__ == '__main__':
    from model import ActorCriticNet, ActorCriticNetMann
    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
  
-   seed = 3#8
+   seed = 3 #8
    random.seed(seed)
    torch.manual_seed(seed)
    torch.cuda.manual_seed(seed)
@@ -418,7 +418,7 @@ if __name__ == '__main__':
  
    ppo.base_dim = ppo.num_inputs
  
-   ppo.model_name = task_path + "/stats/20221002_walk/"
+   ppo.model_name = task_path + "/stats/20221016_samepose/"
    
    if not(os.path.isdir(ppo.model_name)):
       os.mkdir(ppo.model_name)
