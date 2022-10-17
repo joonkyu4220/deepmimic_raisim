@@ -136,8 +136,10 @@ class ENVIRONMENT : public RaisimGymEnv {
       // joint angular velocities,
       // [ball pos and vel]
       // phase variable
-      obDim_ = 163;
+      // obDim_ = 163;
       // 137 + 3 * 2 + 3 * 2 + 4 * 2 + 3 * 2
+      obDim_ = 169;
+      // + 6 ball
       obDouble_.setZero(obDim_);
 
       actionDim_ = gcDim_;
@@ -193,12 +195,17 @@ class ENVIRONMENT : public RaisimGymEnv {
     // index_ = 0; // fixed state initialization
     phase_ = index_ * phase_speed_;
     // gc_ref_.segment(0, gcDim_) = data_gc_.row(index_);
+
     gc_ref_.segment(0, 20) = data_gc_.row(index_).segment(0, 20);
+    // right arm higher? 
+    gc_ref_[15] = 1; gc_ref_[16] = 0; gc_ref_[17] = 0; gc_ref_[18] = 0;
+    gc_ref_[19] = 1.57;
+    gc_ref_[20] = 0.707; gc_ref_[21] = 0; gc_ref_[22] = 0.707; gc_ref_[23] = 0;
+
     gc_ref_.segment(24, 5) = data_gc_.row(index_).segment(20, 5);
     gc_ref_.segment(33, 18) = data_gc_.row(index_).segment(25, 18);
     
-    // right arm higher? 
-    // gc_ref_[19] = 1.57;
+    
 
     pTarget_ << gc_ref_;
 
@@ -206,13 +213,13 @@ class ENVIRONMENT : public RaisimGymEnv {
     // gv_ref_.segment(0, gvDim_) = data_gv_.row(index_);
     character_->setState(gc_ref_, gv_ref_);
     // BALL POS INITIALIZATION
-    // Vec<3> right_hand_pos;
-    // size_t right_hand_idx = character_->getFrameIdxByName("right_wrist"); // 9
-    // character_->getFramePosition(right_hand_idx, right_hand_pos);
-    // ball_gc_init_[0] = right_hand_pos[0];
-    // ball_gc_init_[1] = right_hand_pos[1];
-    // ball_gc_init_[2] = right_hand_pos[2] - 0.151; // ball 0.11, hand 0.04
-    // ball_gv_init_[2] = 0.05;
+    Vec<3> right_hand_pos;
+    size_t right_hand_idx = character_->getFrameIdxByName("right_wrist"); // 9
+    character_->getFramePosition(right_hand_idx, right_hand_pos);
+    ball_gc_init_[0] = right_hand_pos[0];
+    ball_gc_init_[1] = right_hand_pos[1];
+    ball_gc_init_[2] = right_hand_pos[2] - 0.151; // ball 0.11, hand 0.04
+    ball_gv_init_[2] = 0.05;
 
     ball_->setState(ball_gc_init_, ball_gv_init_);
 
@@ -275,11 +282,11 @@ class ENVIRONMENT : public RaisimGymEnv {
     }
     
     // relative ball pos vel
-    // matvecmul(rootRotInv, ball_gc_.head(3) - rootPos.e(), jointPos_B);
-    // matvecmul(rootRotInv, ball_gv_.head(3), jointVel_B);
-    // obDouble_.segment(obIdx, 3) = jointPos_B.e();
-    // obIdx += 3;
-    // obDouble_.segment(obIdx, 3) = jointVel_B.e();
+    matvecmul(rootRotInv, ball_gc_.head(3) - rootPos.e(), jointPos_B);
+    matvecmul(rootRotInv, ball_gv_.head(3), jointVel_B);
+    obDouble_.segment(obIdx, 3) = jointPos_B.e();
+    obIdx += 3;
+    obDouble_.segment(obIdx, 3) = jointVel_B.e();
 
     obDouble_.tail(1) << phase_;
   }
@@ -326,49 +333,52 @@ class ENVIRONMENT : public RaisimGymEnv {
       world_->integrate();
       if (server_) server_->unlockVisualizationServerMutex();
 
-      // for(auto& contact: ball_->getContacts()){
-      //   if(contact.getPosition()[2] < 0.01)
-      //   {
-      //     // std::cout << "GROUND" << std::endl;
-      //     if (from_ground_) {
-      //       contact_terminal_flag_ = true;
-      //       break;
-      //     }
-      //     if (is_hand_) {
-      //       contact_terminal_flag_ = true;
-      //       break;
-      //     }
-      //     is_ground_ = true;
-      //     from_ground_ = true;
-      //     from_hand_ = false;
-      //   }
-      //   else{
-      //     auto& pair_contact = world_->getObject(contact.getPairObjectIndex())->getContacts()[contact.getPairContactIndexInPairObject()];
-      //     if (character_->getBodyIdx("right_elbow") == pair_contact.getlocalBodyIndex()){
-      //       // std::cout << "RIGHT HAND" << std::endl;
-      //       // if (from_hand_) {
-      //       //   contact_terminal_flag_ = true;
-      //       //   break;
-      //       // }
-      //       if (is_ground_) {
-      //         contact_terminal_flag_ = true;
-      //         break;
-      //       }
-      //       if (from_ground_) {
-      //         ground_hand_ = true;
-      //       }
-      //       is_hand_ = true;
-      //       from_hand_ = true;
-      //       from_ground_ = false;
-      //     }
-      //     else{
-      //       // std::cout << "OTHER BODY PART" << std::endl;
-      //       contact_terminal_flag_ = true;
-      //       break;
-      //     }
-      //   }
-      // }
+      for(auto& contact: ball_->getContacts()){
+        if(contact.getPosition()[2] < 0.01)
+        {
+          // std::cout << "GROUND" << std::endl;
+          if (from_ground_) {
+            contact_terminal_flag_ = true;
+            break;
+          }
+          if (is_hand_) {
+            contact_terminal_flag_ = true;
+            break;
+          }
+          is_ground_ = true;
+          from_ground_ = true;
+          from_hand_ = false;
+        }
+        else{
+          auto& pair_contact = world_->getObject(contact.getPairObjectIndex())->getContacts()[contact.getPairContactIndexInPairObject()];
+          if (character_->getBodyIdx("right_wrist") == pair_contact.getlocalBodyIndex()){
+            // std::cout << "RIGHT HAND" << std::endl;
+            // if (from_hand_) {
+            //   contact_terminal_flag_ = true;
+            //   break;
+            // }
+            if (is_ground_) {
+              contact_terminal_flag_ = true;
+              break;
+            }
+            if (from_ground_) {
+              ground_hand_ = true;
+            }
+            is_hand_ = true;
+            from_hand_ = true;
+            from_ground_ = false;
+          }
+          else{
+            // std::cout << "OTHER BODY PART" << std::endl;
+            contact_terminal_flag_ = true;
+            break;
+          }
+        }
+      }
     }
+
+    is_hand_ = false;
+    is_ground_ = false;
 
     // index_ += 1;
     // phase_ += phase_speed_;
@@ -392,8 +402,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     // end effector position reward
     // center of mass position reward
     double orn_err = 0, orn_reward = 0; // , vel_err = 0, vel_reward = 0; ee_reward = 0, com_reward = 0
-    double ball_dist = 0, ball_dist_reward = 0;
-    double dribble_reward = 0;
+    // double ball_dist = 0, ball_dist_reward = 0;
+    // double dribble_reward = 0;
 
     Vec<4> quat, quat_ref, quat_err;
     Mat<3,3> mat, mat_ref, mat_err;
@@ -401,12 +411,13 @@ class ENVIRONMENT : public RaisimGymEnv {
     // for (size_t jointIdx=0; jointIdx<12; jointIdx++) {
     for (size_t jointIdx=0; jointIdx<14; jointIdx++) {
       // no right arm reward
-      // if (jointIdx == 2 || jointIdx == 3)
-      // {
-      //   continue;
-      // }
+      if (jointIdx == 2 || jointIdx == 3 || jointIdx == 4)
+      {
+        continue;
+      }
       // if (jointIdx == 3 || jointIdx == 5 || jointIdx == 7 || jointIdx == 10)
       if (jointIdx == 3 || jointIdx == 6 || jointIdx == 9 || jointIdx == 12)
+      // if (jointIdx == 6 || jointIdx == 9 || jointIdx == 12)
       {
         orn_err += std::pow(gc_[joint_start_index[jointIdx]] - gc_ref_[joint_start_index[jointIdx]], 2);
       }
@@ -442,6 +453,19 @@ class ENVIRONMENT : public RaisimGymEnv {
     // std::cout << "VEL_ERR: " << vel_err << std::endl;
     // vel_reward += exp(-0.1 * vel_err);
     // rewards_.record("angular velocity", vel_reward);
+
+
+
+    double ball_dist = (obDouble_[47] - obDouble_[162]) * (obDouble_[47] - obDouble_[162]) + (obDouble_[48] - obDouble_[163]) * (obDouble_[48] - obDouble_[163]);
+    double dribble_reward = 0;
+    double dist_reward = 0;
+    if (ground_hand_) {
+        dribble_reward += 1;
+        ground_hand_ = false;
+    }
+    dist_reward += exp(-ball_dist);
+    rewards_.record("dribble", dribble_reward);
+    rewards_.record("ball distance", dist_reward);
   }
   
   void observe(Eigen::Ref<EigenVec> ob) final {
@@ -468,9 +492,9 @@ class ENVIRONMENT : public RaisimGymEnv {
     }
     
     // // unwanted contact state
-    // if (contact_terminal_flag_) {
-    //   return true;
-    // }
+    if (contact_terminal_flag_) {
+      return true;
+    }
 
     // // ball too high
     // if (ball_gc_[2] > 1.5){
@@ -478,11 +502,11 @@ class ENVIRONMENT : public RaisimGymEnv {
     // }
 
     // // ball too far
-    // if ((ball_gc_[0] - gc_[0]) * (ball_gc_[0] - gc_[0]) + (ball_gc_[1] - gc_[1]) * (ball_gc_[1] - gc_[1]) > 1)
-    // {
-    //   // BALL TOO FAR
-    //   return true;
-    // }
+    if ((obDouble_[47] - obDouble_[162]) * (obDouble_[47] - obDouble_[162]) + (obDouble_[48] - obDouble_[163]) * (obDouble_[48] - obDouble_[163]) > 1)
+    {
+      // BALL TOO FAR
+      return true;
+    }
 
     return false;
   }
