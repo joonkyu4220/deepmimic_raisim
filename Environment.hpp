@@ -533,7 +533,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     float phase_speed_ = 0;
     float max_phase_ = 1;
     int sim_step_ = 0;
-    int max_sim_step_ = 1000;
+    int max_sim_step_ = 2000;
     double total_reward_ = 0;
 
     // int joint_start_index[12] = {7, 11, 15, 19, 20, 24, 25, 29, 30, 34, 38, 39};
