@@ -314,11 +314,13 @@ class ENVIRONMENT : public RaisimGymEnv {
       if (j == 4 || j == 7 || j == 10 || j == 13)
       {
         pTarget_.segment(actionIdx, 1) << pTarget_.segment(actionIdx, 1) + action.cast<double>().segment(actionIdx, 1);
+        // pTarget_.segment(actionIdx, 1) << action.cast<double>().segment(actionIdx, 1);
         actionIdx += 1;
       }
       else
       {
         pTarget_.segment(actionIdx, 4) << pTarget_.segment(actionIdx, 4) + action.cast<double>().segment(actionIdx, 4);
+        // pTarget_.segment(actionIdx, 4) << action.cast<double>().segment(actionIdx, 4);
         pTarget_.segment(actionIdx, 4) << pTarget_.segment(actionIdx, 4).normalized();
         actionIdx += 4;
       }
@@ -380,13 +382,13 @@ class ENVIRONMENT : public RaisimGymEnv {
     is_hand_ = false;
     is_ground_ = false;
 
-    // index_ += 1;
-    // phase_ += phase_speed_;
+    index_ += 1;
+    phase_ += phase_speed_;
     sim_step_ += 1;
-    // if (phase_ >= max_phase_){
-    //   index_ = 0;
-    //   phase_ = 0;
-    // }
+    if (phase_ >= max_phase_){
+      index_ = 0;
+      phase_ = 0;
+    }
 
     updateObservation();
     computeReward();
