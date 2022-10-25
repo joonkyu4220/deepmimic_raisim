@@ -119,8 +119,6 @@ class ENVIRONMENT : public RaisimGymEnv {
       obDouble_.setZero(obDim_);
       actionDim_ = gcDim_ - 7;
       rewards_.initializeFromConfigurationFile(cfg["reward"]);
-
-      
     }
 
   void init() final {}
@@ -299,7 +297,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     phase_ = index_ * phase_speed_;
     gc_init_ = data_gc_.row(index_);
 
-    // right arm higher
+    // fix right arm higher
     gc_init_[15] = 1; gc_ref_[16] = 0; gc_ref_[17] = 0; gc_ref_[18] = 0;
     gc_init_[19] = 1.57;
     gc_init_[20] = 0.707; gc_init_[21] = 0; gc_init_[22] = 0.707; gc_init_[23] = 0;
@@ -362,17 +360,12 @@ class ENVIRONMENT : public RaisimGymEnv {
       if (bodyIdx == 4 || bodyIdx == 7 || bodyIdx == 10 || bodyIdx == 13) { // revolute jointIdx
         obDouble_.segment(obIdx, 1) = gc_.segment(gcIdx, 1);
         obIdx += 1; gcIdx += 1;
-      }
-      else {
-        obDouble_.segment(obIdx, 4) = gc_.segment(gcIdx, 4);
-        obIdx += 4; gcIdx += 4;
-      }
-
-      if (bodyIdx == 4 || bodyIdx == 7 || bodyIdx == 10 || bodyIdx == 13) { // revolute jointIdx
         obDouble_.segment(obIdx, 1) = gv_.segment(gvIdx, 1);
         obIdx += 1; gvIdx += 1;
       }
       else {
+        obDouble_.segment(obIdx, 4) = gc_.segment(gcIdx, 4);
+        obIdx += 4; gcIdx += 4;
         obDouble_.segment(obIdx, 3) = gv_.segment(gvIdx, 3);
         obIdx += 3; gvIdx += 3;
       }
@@ -412,13 +405,13 @@ class ENVIRONMENT : public RaisimGymEnv {
     gc_ref_ = data_gc_.row(index_);
     
     int actionIdx = 0;
-    int targetIdx = 0;
+    int targetIdx;
     for (int jointIdx=1; jointIdx<15; jointIdx++)
     {
       targetIdx = actionIdx + 7;
       if (jointIdx == 4 || jointIdx == 7 || jointIdx == 10 || jointIdx == 13)
       {
-        pTarget_.segment(targetIdx, 1) << pTarget_.segment(targetIdx + 7, 1) + action.cast<double>().segment(actionIdx, 1);
+        pTarget_.segment(targetIdx, 1) << pTarget_.segment(targetIdx, 1) + action.cast<double>().segment(actionIdx, 1);
         // TODO
         // pTarget_.segment(actionIdx, 1) << action.cast<double>().segment(actionIdx, 1);
         actionIdx += 1;
