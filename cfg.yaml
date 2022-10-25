@@ -33,7 +33,7 @@ environment:
     #   coeff: 0.15
     # com position:
     #   coeff: 0.1
-  preprocess: False
+  preprocess: True
 
 architecture:
   policy_net: [128, 128]
