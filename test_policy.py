@@ -27,7 +27,7 @@ if __name__ == '__main__':
    torch.cuda.manual_seed(seed)
    torch.set_num_threads(1)
  
-   # directories
+   # directories 
    task_path = os.path.dirname(os.path.realpath(__file__))
    home_path = task_path + "/../../../../.."
    # print(task_path)
@@ -45,7 +45,7 @@ if __name__ == '__main__':
    num_outputs = env.action_space.shape[0]
    # model = ActorCriticNetMann(num_inputs, num_outputs, [128, 128])
    model = ActorCriticNet(num_inputs, num_outputs, [128, 128])
-   model.load_state_dict(torch.load(task_path + "/stats/20221021_walkwith541/iter24999.pt"))
+   model.load_state_dict(torch.load(task_path + "/stats/20221021_walk541/iter70999.pt"))
    model.cuda()
 
    num_frames = 3000

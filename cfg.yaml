@@ -12,7 +12,13 @@ environment:
   max_time: 100.0
   reward:
     orientation:
-      coeff: 0.5 # 0.65
+      coeff: 0.325 # 0.65
+    velocity:
+      coeff: 0.05
+    end effector:
+      coeff: 0.075
+    com:
+      coeff: 0.05
     dribble:
       coeff: 0.4
     ball distance:
@@ -27,6 +33,7 @@ environment:
     #   coeff: 0.15
     # com position:
     #   coeff: 0.1
+  preprocess: False
 
 architecture:
   policy_net: [128, 128]
