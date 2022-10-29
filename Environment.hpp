@@ -179,8 +179,9 @@ class ENVIRONMENT : public RaisimGymEnv {
       data_ee_.row(frameIdx).segment(9, 3) = data_pos_.row(frameIdx).segment(39, 3); // left ankle
       // center-of-mass
       comPos_W = character_->getCOM();
-      matvecmul(rootRotInv, comPos_W - rootPos, comPos_B);
-      data_com_.row(frameIdx).segment(0, 3) = comPos_B.e();
+      // matvecmul(rootRotInv, comPos_W - rootPos, comPos_B);
+      // data_com_.row(frameIdx).segment(0, 3) = comPos_B.e();
+      data_com_.row(frameIdx).segment(0, 3) = comPos_W.e();
     }
 
     // CALCULATE ANGULAR VELOCITY
@@ -290,6 +291,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void reset() final {
     sim_step_ = 0;
+    n_loops_ = 0;
     total_reward_ = 0;
     
     // select random frame
@@ -304,8 +306,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     
     pTarget_ << gc_init_;
 
-    // TODO
-    // gv_ref_.segment(0, gvDim_) = data_gv_.row(index_);
+    // gv_init_.segment(0, gvDim_) = data_gv_.row(index_);
     character_->setState(gc_init_, gv_init_);
     
     // ball position initialization
@@ -379,8 +380,9 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     // for com reward
     comPos_W = character_ -> getCOM();
-    matvecmul(rootRotInv, comPos_W - rootPos, comPos_B);
-    com_ = comPos_B.e();
+    // matvecmul(rootRotInv, comPos_W - rootPos, comPos_B);
+    // com_ = comPos_B.e();
+    com_ = comPos_W.e();
 
     // ball pos, lin vel
     matvecmul(rootRotInv, ball_gc_.head(3) - rootPos.e(), jointPos_B);
@@ -480,6 +482,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     if (index_ >= dataLen_){
       index_ = 0;
       phase_ = 0;
+      n_loops_ += 1;
     }
 
     updateObservation();
@@ -534,8 +537,11 @@ class ENVIRONMENT : public RaisimGymEnv {
     ee_err = (ee_ - data_ee_.row(index_)).squaredNorm();
     ee_reward = exp(-40 * ee_err);
     rewards_.record("end effector", ee_reward);
-
-    com_err = (com_ - data_com_.row(index_)).squaredNorm();
+    Eigen::VectorXd com_ref_;
+    com_ref_ = data_com_.row(index_);
+    com_ref_[0] += 1.2775 * n_loops_;
+    // com_err = (com_ - data_com_.row(index_)).squaredNorm();
+    com_err = (com_ - com_ref_).squaredNorm();
     com_reward = exp(-10 * com_err);
     rewards_.record("com", com_reward);
 
@@ -630,6 +636,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     bool is_ground_ = false;
     bool is_hand_ = false;
     bool ground_hand_ = false;
+
+    int n_loops_;
 
 };
 
