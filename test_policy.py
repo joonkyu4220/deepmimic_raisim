@@ -45,7 +45,7 @@ if __name__ == '__main__':
    num_outputs = env.action_space.shape[0]
    # model = ActorCriticNetMann(num_inputs, num_outputs, [128, 128])
    model = ActorCriticNet(num_inputs, num_outputs, [128, 128])
-   model.load_state_dict(torch.load(task_path + "/stats/20221021_walk541/iter70999.pt"))
+   model.load_state_dict(torch.load(task_path + "/stats/20221025_integrate/iter18999.pt"))
    model.cuda()
 
    num_frames = 3000

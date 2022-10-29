@@ -12,15 +12,15 @@ environment:
   max_time: 100.0
   reward:
     orientation:
-      coeff: 0.325 # 0.65
+      coeff: 0.4 # 0.65
     velocity:
       coeff: 0.05
     end effector:
-      coeff: 0.075
+      coeff: 0.1
     com:
       coeff: 0.05
     dribble:
-      coeff: 0.4
+      coeff: 0.3
     ball distance:
       coeff: 0.1
     # ball distance:

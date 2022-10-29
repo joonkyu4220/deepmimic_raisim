@@ -1,0 +1,12 @@
+orientation:
+      coeff: 0.40 # 0.65
+    velocity:
+      coeff: 0.05 # 0.1
+    end effector:
+      coeff: 0.10 # 0.15
+    com:
+      coeff: 0.05 # 0.15
+    dribble:
+      coeff: 0.30
+    ball distance:
+      coeff: 0.1
