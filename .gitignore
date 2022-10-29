@@ -1,3 +1,7 @@
 *.png
 *.pt
+!/stats/
+stats/*
+!stats/action_raw
+!stats/description.txt
 *.zip
