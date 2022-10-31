@@ -2,38 +2,70 @@ seed: 1
 record_video: yes # yes
 
 environment:
+  motion_data: "backflip"
+  wrist: False
+
+  use_char_phase: False
+  use_ball_phase: False
+
+  preprocess: True
+
+  orn_scale: 2
+  vel_scale: 0.1
+  ee_scale: 40
+  com_scale: 10
+
+  dribble_task: False
+
   render: True
 # just testing commenting
   num_envs: 800 # 800
   eval_every_n: 200
   num_threads: 10 #30
   simulation_dt: 0.002 #0.0025
-  control_dt: 0.033
+  # control_dt: 0.033
+  control_dt: 0.0625
   max_time: 100.0
   reward:
     orientation:
-      coeff: 0.4 # 0.65
+      coeff: 0.65
     velocity:
-      coeff: 0.05
+      coeff: 0.1 # 0.1
     end effector:
-      coeff: 0.1
+      coeff: 0.15 # 0.15
     com:
-      coeff: 0.05
+      coeff: 0.1 # 0.1
     dribble:
-      coeff: 0.3
+      coeff: 0.0
     ball distance:
-      coeff: 0.1
-    # ball distance:
-    #   coeff: 0.2
-    # dribble:
-    #   coeff: 0.6
-    # angular velocity:
-    #   coeff: 0.00 # 0.1
+      coeff: 0.0
+
+    # orientation:
+    #   coeff: 0.50 # 0.65
+    # velocity:
+    #   coeff: 0.075 # 0.1
     # end effector:
-    #   coeff: 0.15
-    # com position:
-    #   coeff: 0.1
-  preprocess: True
+    #   coeff: 0.10 # 0.15
+    # com:
+    #   coeff: 0.075 # 0.15
+    # dribble:
+    #   coeff: 0.20
+    # ball distance:
+    #   coeff: 0.05
+
+    # orientation:
+    #   coeff: 0.40 # 0.65
+    # velocity:
+    #   coeff: 0.05 # 0.1
+    # end effector:
+    #   coeff: 0.10 # 0.15
+    # com:
+    #   coeff: 0.05 # 0.15
+    # dribble:
+    #   coeff: 0.30
+    # ball distance:
+    #   coeff: 0.10
+  
 
 architecture:
   policy_net: [128, 128]
