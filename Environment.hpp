@@ -17,10 +17,11 @@ class ENVIRONMENT : public RaisimGymEnv {
         RaisimGymEnv(resourceDir, cfg), visualizable_(visualizable) {
       
       // SETTINGS
-      setData(cfg["motion_data"], cfg["wrist"]);
+      setData(cfg["motion_data"], cfg["wrist"], cfg["control_dt"]);
       setPreprocess(cfg["preprocess"]);
       setPhaseUsage(cfg["use_char_phase"], cfg["use_ball_phase"]);
       setRewardScale(cfg["orn_scale"], cfg["vel_scale"], cfg["ee_scale"], cfg["com_scale"]);
+      setTask(cfg["dribble_task"]);
 
 
       // WORLD SETUP
@@ -85,7 +86,6 @@ class ENVIRONMENT : public RaisimGymEnv {
       character_->setPdGains(jointPgain, jointDgain);
       character_->setGeneralizedForce(Eigen::VectorXd::Zero(gvDim_));
 
-
       // BALL
       ball_ = world_->addArticulatedSystem(resourceDir_ + "/ball3D.urdf");
       ball_->setName("ball");
@@ -112,6 +112,22 @@ class ENVIRONMENT : public RaisimGymEnv {
       }
       loadGT();
 
+      // std::cout << "GC" << std::endl;
+      // std::cout << "===================" << std::endl;
+      // std::cout << data_gc_.row(38) << std::endl;
+
+      // std::cout << "GV" << std::endl;
+      // std::cout << "===================" << std::endl;
+      // std::cout << data_gv_.row(38) << std::endl;
+
+      // std::cout << "EE" << std::endl;
+      // std::cout << "===================" << std::endl;
+      // std::cout << data_ee_.row(38) << std::endl;
+
+      // std::cout << "COM" << std::endl;
+      // std::cout << "===================" << std::endl;
+      // std::cout << data_com_.row(38) << std::endl;
+
       // AGENT
       stateDim_ = obDim_; // TODO
       stateDouble_.setZero(stateDim_); // TODO
@@ -133,9 +149,15 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void init() final {}
 
-  void setData(const Yaml::Node& motion_data, const Yaml::Node& wrist){
+  void setTask(const Yaml::Node& dribble_task)
+  {
+    dribble_ = dribble_task.template As<bool>();
+  }
+
+  void setData(const Yaml::Node& motion_data, const Yaml::Node& wrist, const Yaml::Node& dt){
     motion_data_ = motion_data.template As<std::string>();
     data_with_wrist_ = wrist.template As<bool>();
+    control_dt_ = dt.template As<float>();
   }
 
   void setPreprocess(const Yaml::Node& preprocess){
@@ -162,7 +184,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     while (gcfile >> data) {
       data_gc_.coeffRef(row, col) = data;
       col++;
-      if (!data_with_wrist_ && (col == c_start_[5] || col == c_start_[8])){ // skip the wrist joints
+      if (!data_with_wrist_ && (col == c_start_[4] || col == c_start_[7])){ // skip the wrist joints
         data_gc_.coeffRef(row, col) = 1; data_gc_.coeffRef(row, col + 1) = 0; data_gc_.coeffRef(row, col + 2) = 0; data_gc_.coeffRef(row, col + 3) = 0;
         col += 4;
       }
@@ -236,6 +258,7 @@ class ENVIRONMENT : public RaisimGymEnv {
           prevGC = prevFrame.segment(gcIdx, 1); nextGC = nextFrame.segment(gcIdx, 1);
           data_gv_.row(frameIdx).segment(gvIdx, 1) = (nextGC - prevGC) / dt;
           gcIdx += 1; gvIdx += 1;
+
         }
         else {
           prevGC = prevFrame.segment(gcIdx, 4); nextGC = nextFrame.segment(gcIdx, 4);
@@ -244,7 +267,6 @@ class ENVIRONMENT : public RaisimGymEnv {
         }
       }
     }
-
 
     // WRITE FILES
     std::ofstream gvFile(resourceDir_ + "/" + motion_data_ + "_gv.txt", std::ios::out | std::ios::trunc);
@@ -334,46 +356,54 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     std::ifstream loopturnfile(resourceDir_ + "/" + motion_data_ + "_loop_turn.txt");
     Vec<4> loop_turn_quat;
+    loop_turn_quat.setZero();
+    loop_turn_quat[0] = 1;
     row = 0, col = 0;
     while (loopturnfile >> data) {
       loop_turn_quat[col] = data;
       col++;
     }
     raisim::quatToRotMat(loop_turn_quat, loop_turn_);
-
-    loop_disp_acc_.setZero();
-    raisim::quatToRotMat({1, 0, 0, 0}, loop_turn_acc_);
   }
 
   void reset() final {
     sim_step_ = 0;
     n_loops_ = 0;
+    loop_disp_acc_.setZero();
+    raisim::quatToRotMat({1, 0, 0, 0}, loop_turn_acc_);
     total_reward_ = 0;
 
     // select random frame
     index_ = rand() % dataLen_;
     char_phase_ = index_ * char_phase_speed_;
     gc_init_ = data_gc_.row(index_);
-
     // fix right arm higher
-    gc_init_[c_start_[2]] = 1; gc_ref_[c_start_[2] + 1] = 0; gc_ref_[c_start_[2] + 2] = 0; gc_ref_[c_start_[2] + 3] = 0;
-    gc_init_[c_start_[3]] = 1.57;
-    gc_init_[c_start_[4]] = 0.707; gc_init_[c_start_[4] + 1] = 0; gc_init_[c_start_[4] + 2] = 0.707; gc_init_[c_start_[4] + 3] = 0;
+    if (dribble_){
+      gc_init_[c_start_[2]] = 1; gc_init_[c_start_[2] + 1] = 0; gc_init_[c_start_[2] + 2] = 0; gc_init_[c_start_[2] + 3] = 0;
+      gc_init_[c_start_[3]] = 1.57;
+      gc_init_[c_start_[4]] = 0.707; gc_init_[c_start_[4] + 1] = 0; gc_init_[c_start_[4] + 2] = 0.707; gc_init_[c_start_[4] + 3] = 0;
+    }
+    gv_init_ = data_gv_.row(index_);
     
     pTarget_ << gc_init_;
 
-    gv_init_ = data_gv_.row(index_);
     character_->setState(gc_init_, gv_init_);
     
     // ball state initialization
-    Vec<3> right_hand_pos;
-    size_t right_hand_idx = character_->getFrameIdxByName("right_wrist"); // 9
-    character_->getFramePosition(right_hand_idx, right_hand_pos);
-    ball_gc_init_[0] = right_hand_pos[0];
-    ball_gc_init_[1] = right_hand_pos[1];
-    ball_gc_init_[2] = right_hand_pos[2] - 0.151; // ball 0.11, hand 0.04
-    ball_gv_init_[2] = 0.05;
-    ball_gc_init_[3] = 1;
+    if (dribble_){
+      Vec<3> right_hand_pos;
+      size_t right_hand_idx = character_->getFrameIdxByName("right_wrist"); // 9
+      character_->getFramePosition(right_hand_idx, right_hand_pos);
+      ball_gc_init_[0] = right_hand_pos[0];
+      ball_gc_init_[1] = right_hand_pos[1];
+      ball_gc_init_[2] = right_hand_pos[2] - 0.151; // ball 0.11, hand 0.04
+      ball_gc_init_[3] = 1;
+      ball_gv_init_[2] = 0.05;
+    }
+    else{
+      ball_gc_init_[0] = 0; ball_gc_init_[1] = 100; ball_gc_init_[2] = 5; ball_gc_init_[3] = 1;
+    }
+    
 
     ball_->setState(ball_gc_init_, ball_gv_init_);
 
@@ -385,6 +415,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     is_hand_ = false;
     ground_hand_ = false;
 
+    fall_flag_ = false;
     contact_terminal_flag_ = false;
 
     updateObservation();
@@ -481,7 +512,7 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   float step(const Eigen::Ref<EigenVec>& action) final {
     gc_ref_ = data_gc_.row(index_);
-    
+
     int actionIdx = 0;
     int controlIdx;
     for (int jointIdx=0; jointIdx < nJoints_; jointIdx++)
@@ -499,7 +530,8 @@ class ENVIRONMENT : public RaisimGymEnv {
       actionIdx += c_dim_[jointIdx];
     }
 
-    character_->setPdTarget(pTarget_, vTarget_);
+    // character_->setPdTarget(pTarget_, vTarget_);
+    character_->setState(data_gc_.row(index_), data_gv_.row(index_));
 
     for (int i = 0; i < int(control_dt_ / simulation_dt_ + 1e-10); i++)
     {
@@ -507,47 +539,65 @@ class ENVIRONMENT : public RaisimGymEnv {
       world_->integrate();
       if (server_) server_->unlockVisualizationServerMutex();
 
-      for(auto& contact: ball_->getContacts()){
-        if(contact.getPosition()[2] < 0.01)
-        {
-          if (from_ground_) {
-            contact_terminal_flag_ = true;
-            break;
-          }
-          if (is_hand_) {
-            contact_terminal_flag_ = true;
-            break;
-          }
-          is_ground_ = true;
-          from_ground_ = true;
-          from_hand_ = false;
-        }
-        else{
-          auto& pair_contact = world_->getObject(contact.getPairObjectIndex())->getContacts()[contact.getPairContactIndexInPairObject()];
-          if (character_->getBodyIdx("right_wrist") == pair_contact.getlocalBodyIndex()){
-            if (is_ground_) {
+      if (dribble_){
+        for(auto& contact: ball_->getContacts()){
+          if(contact.getPosition()[2] < 0.01)
+          {
+            if (from_ground_) {
               contact_terminal_flag_ = true;
               break;
             }
-            if (from_ground_) {
-              ground_hand_ = true;
+            if (is_hand_) {
+              contact_terminal_flag_ = true;
+              break;
             }
-            is_hand_ = true;
-            from_hand_ = true;
-            from_ground_ = false;
-
-            // TODO: ball phase control
+            is_ground_ = true;
+            from_ground_ = true;
+            from_hand_ = false;
           }
           else{
-            contact_terminal_flag_ = true;
+            auto& pair_contact = world_->getObject(contact.getPairObjectIndex())->getContacts()[contact.getPairContactIndexInPairObject()];
+            if (character_->getBodyIdx("right_wrist") == pair_contact.getlocalBodyIndex()){
+              if (is_ground_) {
+                contact_terminal_flag_ = true;
+                break;
+              }
+              if (from_ground_) {
+                ground_hand_ = true;
+              }
+              is_hand_ = true;
+              from_hand_ = true;
+              from_ground_ = false;
+
+              // TODO: ball phase control
+            }
+            else{
+              contact_terminal_flag_ = true;
+              break;
+            }
+          }
+        }
+      }
+
+      for(auto& contact: character_->getContacts()){
+        if (contact.getPosition()[2] < 0.01){
+          if ((contact.getlocalBodyIndex() != 11) && (contact.getlocalBodyIndex() != 14)){
+            fall_flag_ = true;
             break;
           }
         }
       }
     }
 
+    updateObservation();
+    computeReward();
+
     is_hand_ = false;
     is_ground_ = false;
+
+    if (gc_[2] < root_height_threshold_){
+      fall_flag_ = true;
+    }
 
     index_ += 1;
     char_phase_ += char_phase_speed_;
@@ -557,14 +607,13 @@ class ENVIRONMENT : public RaisimGymEnv {
       char_phase_ = 0;
       n_loops_ += 1;
 
-      Vec<3> loop_add;
-      matvecmul(loop_turn_acc_, loop_disp_, loop_add);
-      loop_disp_acc_ += loop_add;
-      loop_turn_acc_ *= loop_turn_;
+      Vec<3> temp_disp;
+      Mat<3,3> temp_turn;
+      matvecmul(loop_turn_acc_, loop_disp_, temp_disp);
+      loop_disp_acc_ += temp_disp;
+      temp_turn = loop_turn_acc_;
+      raisim::matmul(loop_turn_, temp_turn, loop_turn_acc_);
     }
-
-    updateObservation();
-    computeReward();
 
     double current_reward = rewards_.sum();
     total_reward_ += current_reward;
@@ -621,6 +670,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     // com_ref_ = data_com_.row(index_);
     // // TODO: appropriate root transformation for smooth looping should be determined at preprocessing step
     // com_ref_[0] += 1.2775 * n_loops_;
+
     com_err = (com_ - com_ref_).squaredNorm();
     com_reward = exp(-com_scale_ * com_err);
     rewards_.record("com", com_reward);
@@ -636,8 +686,6 @@ class ENVIRONMENT : public RaisimGymEnv {
     dist_reward += exp(-ball_dist_);
     rewards_.record("ball distance", dist_reward);
   }
-  
-
 
   void observe(Eigen::Ref<EigenVec> ob) final {
     ob = obDouble_.cast<float>();
@@ -657,25 +705,28 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   bool isTerminalState(float& terminalReward) final {
     // low root height
-    if (gc_[2] < 0.6) {
+    if (fall_flag_) {
       return true;
     }
-    
-    // unwanted contact state
-    if (contact_terminal_flag_) {
-      return true;
-    }
+    if (dribble_){
+      // unwanted contact state
+      if (contact_terminal_flag_) {
+        return true;
+      }
 
-    // ball too far
-    if (ball_dist_ > 1.0)
-    {
-      return true;
+      // ball too far
+      if (ball_dist_ > 1.0)
+      {
+        return true;
+      }
     }
-
     return false;
   }
 
   private:
+
+    bool dribble_ = false;
+
     bool is_preprocess_ = false;
 
     bool visualizable_ = false;
@@ -722,6 +773,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     int ee_pos_start[4] = {12, 21, 30, 39};
 
     bool contact_terminal_flag_ = false;
+    float root_height_threshold_ = 0.5;
+    bool fall_flag_ = false;
 
     bool from_ground_ = false;
     bool from_hand_ = false;
