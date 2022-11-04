@@ -33,8 +33,10 @@ if __name__ == '__main__':
    # print(task_path)
    # print(home_path)
 
+   model_path = task_path + "/stats/20221103_testwalkornvelee"
+
    # config
-   cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
+   cfg = YAML().load(open(model_path + "/cfg.yaml", 'r'))
 
    # create environment from the configuration file
    env = VecEnv(deepmimic.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
@@ -45,13 +47,11 @@ if __name__ == '__main__':
    num_outputs = env.action_space.shape[0]
    # model = ActorCriticNetMann(num_inputs, num_outputs, [128, 128])
    model = ActorCriticNet(num_inputs, num_outputs, [128, 128])
-   model.load_state_dict(torch.load(task_path + "/stats/20221021_walk541/iter70999.pt"))
+   model.load_state_dict(torch.load(model_path + "/iter4999.pt"))
    model.cuda()
 
    num_frames = 3000
    save_data = np.zeros((num_frames, env.num_states))
-   save_gating = np.zeros((num_frames, 8))
-   save_reference = np.zeros((num_frames, env.num_states))
 
    env.setTask()
    
@@ -59,12 +59,8 @@ if __name__ == '__main__':
    
    obs = env.observe()
    
-   average_gating = np.zeros(8)
-   average_gating_sum = 0
    for i in range(num_frames):
       with torch.no_grad():
          act = model.sample_best_actions(obs)
-  
       obs, rew, done, _ = env.step(act)
-      
       import time; time.sleep(0.02)

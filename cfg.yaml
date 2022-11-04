@@ -2,70 +2,49 @@ seed: 1
 record_video: yes # yes
 
 environment:
-  motion_data: "backflip"
-  wrist: False
-
-  use_char_phase: False
-  use_ball_phase: False
-
-  preprocess: True
-
-  orn_scale: 2
-  vel_scale: 0.1
-  ee_scale: 40
-  com_scale: 10
-
-  dribble_task: False
-
   render: True
-# just testing commenting
-  num_envs: 800 # 800
+  num_envs: 800
+  num_threads: 10
+  simulation_dt: 0.002
+  control_dt: 0.033333
   eval_every_n: 200
-  num_threads: 10 #30
-  simulation_dt: 0.002 #0.0025
-  # control_dt: 0.033
-  control_dt: 0.0625
   max_time: 100.0
+
+  motion data:
+    file name: "walk"
+    has wrist: False
+    fps: 30
+    preprocess: True
+    visualize kinematic: False
+  
+  phase usage:
+    character: True
+    ball: True
+
+  task:
+    dribble: True
+    ball state: True
+    mask: True
+
+  error sensitivity:
+    orientation: 2
+    velocity: 0.1
+    end effector: 40
+    com: 10
+
   reward:
     orientation:
-      coeff: 0.65
+      coeff: 0.4 # 0.65
     velocity:
       coeff: 0.1 # 0.1
     end effector:
-      coeff: 0.15 # 0.15
+      coeff: 0.1 # 0.15
     com:
-      coeff: 0.1 # 0.1
-    dribble:
-      coeff: 0.0
+      coeff: 0.0 # 0.10
+    contact:
+      coeff: 0.3
     ball distance:
-      coeff: 0.0
-
-    # orientation:
-    #   coeff: 0.50 # 0.65
-    # velocity:
-    #   coeff: 0.075 # 0.1
-    # end effector:
-    #   coeff: 0.10 # 0.15
-    # com:
-    #   coeff: 0.075 # 0.15
-    # dribble:
-    #   coeff: 0.20
-    # ball distance:
-    #   coeff: 0.05
-
-    # orientation:
-    #   coeff: 0.40 # 0.65
-    # velocity:
-    #   coeff: 0.05 # 0.1
-    # end effector:
-    #   coeff: 0.10 # 0.15
-    # com:
-    #   coeff: 0.05 # 0.15
-    # dribble:
-    #   coeff: 0.30
-    # ball distance:
-    #   coeff: 0.10
-  
+      coeff: 0.1
 
 architecture:
   policy_net: [128, 128]
