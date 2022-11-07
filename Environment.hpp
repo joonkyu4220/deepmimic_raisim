@@ -395,6 +395,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     vTarget_.setZero();
     
     simChar_->setState(gcInit_, gvInit_);
+    simChar_->setPdTarget(pTarget_, vTarget_);
   }
 
   void initializeBall(){
