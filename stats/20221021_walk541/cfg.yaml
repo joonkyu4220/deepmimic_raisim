@@ -1,0 +1,51 @@
+seed: 1
+record_video: yes # yes
+
+environment:
+  render: True
+  num_envs: 1
+  num_threads: 1
+  simulation_dt: 0.002
+  control_dt: 0.033333
+  eval_every_n: 200
+  max_time: 100.0
+
+  motion data:
+    file name: "walk"
+    has wrist: False
+    fps: 30
+    preprocess: True
+    visualize kinematic: False
+  
+  phase usage:
+    character: True
+    ball: False
+
+  task:
+    dribble: True
+    ball state: True
+    mask: True
+
+  error sensitivity:
+    orientation: 2
+    velocity: 0.1
+    end effector: 40
+    com: 10
+
+  reward:
+    orientation:
+      coeff: 0.5 # 0.65
+    velocity:
+      coeff: 0.0 # 0.1
+    end effector:
+      coeff: 0.0 # 0.15
+    com:
+      coeff: 0.0 # 0.10
+    contact:
+      coeff: 0.4
+    ball distance:
+      coeff: 0.1
+
+architecture:
+  policy_net: [128, 128]
+  value_net: [128, 128]
