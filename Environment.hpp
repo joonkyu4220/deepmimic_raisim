@@ -39,6 +39,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     motionFileName_ = cfg["motion data"]["file name"].template As<std::string>();
     dataHasWrist_ = cfg["motion data"]["has wrist"].template As<bool>();
     control_dt_ = 1.0 / cfg["motion data"]["fps"].template As<float>();
+    simulation_dt_ = cfg["simulation_dt"].template As<float>();
     isPreprocess_ = cfg["motion data"]["preprocess"].template As<bool>();
     visKin_ =cfg["motion data"]["visualize kinematic"].template As<bool>();
 
@@ -356,8 +357,8 @@ class ENVIRONMENT : public RaisimGymEnv {
   }
 
   void reset() final {
-    simStep_ = 0;
-    totalReward_ = 0;
+    sim_step_ = 0;
+    total_reward_ = 0;
 
     nLoops_ = 0;
     loopDisplacementAccumulated_.setZero();
@@ -571,7 +572,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     updateTargetMotion();
 
     double current_reward = rewards_.sum();
-    totalReward_ += current_reward;
+    total_reward_ += current_reward;
 
     return current_reward;
   }
@@ -600,10 +601,10 @@ class ENVIRONMENT : public RaisimGymEnv {
             contactTerminalFlag_ = true;
             break;
           }
-          // if (contact.getNormal()[2] > 0) {
-          //   contactTerminalFlag_ = true;
-          //   break;
-          // }
+          if (contact.getNormal()[2] > 0) {
+            contactTerminalFlag_ = true;
+            break;
+          }
           if (fromGround_) {
             groundHand_ = true;
           }
@@ -648,7 +649,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     index_ += 1;
     charPhase_ += charPhaseSpeed_;
     ballPhase_ += ballPhaseSpeed_;
-    simStep_ += 1;
+    sim_step_ += 1;
     if (index_ >= dataLen_){
       index_ = 0;
       charPhase_ = 0;
@@ -745,11 +746,11 @@ class ENVIRONMENT : public RaisimGymEnv {
   }
 
   bool time_limit_reached() {
-    return simStep_ > maxSimStep_;
+    return sim_step_ > max_sim_step_;
   }
 
   float get_total_reward() {
-    return float(totalReward_);
+    return float(total_reward_);
   }
 
 
@@ -813,9 +814,9 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     Eigen::VectorXd obDouble_, stateDouble_;
 
-    int simStep_ = 0;
-    int maxSimStep_ = 100;
-    double totalReward_ = 0;
+    int sim_step_ = 0;
+    int max_sim_step_ = 100;
+    double total_reward_ = 0;
 
     int nJoints_ = 14;
 
