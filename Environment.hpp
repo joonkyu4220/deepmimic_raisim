@@ -596,6 +596,7 @@ class ENVIRONMENT : public RaisimGymEnv {
       }
       else{
         auto& pair_contact = world_->getObject(contact.getPairObjectIndex())->getContacts()[contact.getPairContactIndexInPairObject()];
+        // todo
         if (simChar_->getBodyIdx("right_wrist") == pair_contact.getlocalBodyIndex() || simChar_->getBodyIdx("right_elbow") == pair_contact.getlocalBodyIndex()){
           if (isGround_) {
             contactTerminalFlag_ = true;
@@ -815,7 +816,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     Eigen::VectorXd obDouble_, stateDouble_;
 
     int sim_step_ = 0;
-    int max_sim_step_ = 100;
+    int max_sim_step_ = 2000;
     double total_reward_ = 0;
 
     int nJoints_ = 14;
