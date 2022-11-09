@@ -530,8 +530,8 @@ class ENVIRONMENT : public RaisimGymEnv {
       actionIdx += c_dim_[jointIdx];
     }
 
-    // character_->setPdTarget(pTarget_, vTarget_);
-    character_->setState(data_gc_.row(index_), data_gv_.row(index_));
+    character_->setPdTarget(pTarget_, vTarget_);
+    // character_->setState(data_gc_.row(index_), data_gv_.row(index_));
 
     for (int i = 0; i < int(control_dt_ / simulation_dt_ + 1e-10); i++)
     {
