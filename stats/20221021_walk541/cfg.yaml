@@ -3,8 +3,8 @@ record_video: yes # yes
 
 environment:
   render: True
-  num_envs: 800
-  num_threads: 8
+  num_envs: 1
+  num_threads: 1
   simulation_dt: 0.002
   control_dt: 0.033333
   eval_every_n: 200
@@ -19,7 +19,7 @@ environment:
   
   phase usage:
     character: True
-    ball: True
+    ball: False
 
   task:
     dribble: True
