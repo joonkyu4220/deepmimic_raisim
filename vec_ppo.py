@@ -513,7 +513,7 @@ if __name__ == '__main__':
     
     ppo.base_dim = ppo.num_inputs
     
-    ppo.model_name = task_path + "/stats/20221107_final/"
+    ppo.model_name = task_path + "/stats/20221109_final/"
     
     if not(os.path.isdir(ppo.model_name)):
         os.mkdir(ppo.model_name)

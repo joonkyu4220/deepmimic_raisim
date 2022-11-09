@@ -4,7 +4,7 @@ record_video: yes # yes
 environment:
   render: True
   num_envs: 800
-  num_threads: 10
+  num_threads: 8
   simulation_dt: 0.002
   control_dt: 0.033333
   eval_every_n: 200
@@ -34,15 +34,15 @@ environment:
 
   reward:
     orientation:
-      coeff: 0.4 # 0.65
+      coeff: 0.5 # 0.65
     velocity:
-      coeff: 0.1 # 0.1
+      coeff: 0.0 # 0.1
     end effector:
-      coeff: 0.1 # 0.15
+      coeff: 0.0 # 0.15
     com:
       coeff: 0.0 # 0.10
     contact:
-      coeff: 0.3
+      coeff: 0.4
     ball distance:
       coeff: 0.1
 

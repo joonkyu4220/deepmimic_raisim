@@ -522,8 +522,8 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     if (visKin_){
       Eigen::VectorXd kinGC_, kinGV_;
-      kinGC_ << gcRef_; kinGV_ << gvRef_;
-      kinGC_[1] += 5;
+      kinGC_ = gcRef_; kinGV_ = gvRef_;
+      kinGC_[1] += 1.5;
       kinChar_->setState(kinGC_, kinGV_);
     }
 
@@ -552,7 +552,7 @@ class ENVIRONMENT : public RaisimGymEnv {
         checkBallContact();
       }
       
-      checkCharacterContact();
+      // checkCharacterContact(); // todo
       
     }
 
@@ -595,15 +595,15 @@ class ENVIRONMENT : public RaisimGymEnv {
       }
       else{
         auto& pair_contact = world_->getObject(contact.getPairObjectIndex())->getContacts()[contact.getPairContactIndexInPairObject()];
-        if (simChar_->getBodyIdx("right_wrist") == pair_contact.getlocalBodyIndex()){
+        if (simChar_->getBodyIdx("right_wrist") == pair_contact.getlocalBodyIndex() || simChar_->getBodyIdx("right_elbow") == pair_contact.getlocalBodyIndex()){
           if (isGround_) {
             contactTerminalFlag_ = true;
             break;
           }
-          if (contact.getNormal()[2] > 0) {
-            contactTerminalFlag_ = true;
-            break;
-          }
+          // if (contact.getNormal()[2] > 0) {
+          //   contactTerminalFlag_ = true;
+          //   break;
+          // }
           if (fromGround_) {
             groundHand_ = true;
           }
@@ -663,13 +663,13 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void computeReward() {
     // imitation reward
-    double orn_err = 0, orn_reward = 0;
-    double vel_err = 0, vel_reward = 0;
-    double ee_err = 0, ee_reward = 0;
-    double com_err = 0, com_reward = 0;
+    double ornErr = 0, ornReward = 0;
+    double velErr = 0, velReward = 0;
+    double eeErr = 0, eeReward = 0;
+    double comErr = 0, comReward = 0;
 
-    Vec<4> quat, quat_ref, quat_err;
-    Mat<3,3> mat, mat_ref, mat_err;
+    Vec<4> quat, quatRef, quatErr;
+    Mat<3,3> mat, matRef, matErr;
 
     for (size_t jointIdx = 0; jointIdx < nJoints_; jointIdx++) {
       if (mask_ && isRightArm_[jointIdx])
@@ -678,62 +678,62 @@ class ENVIRONMENT : public RaisimGymEnv {
       }
       if (cDim_[jointIdx] == 1)
       {
-        orn_err += std::pow(gc_[cStartIdx_[jointIdx]] - gcRef_[cStartIdx_[jointIdx]], 2);
+        ornErr += std::pow(gc_[cStartIdx_[jointIdx]] - gcRef_[cStartIdx_[jointIdx]], 2);
       }
       else {
         quat[0] = gc_[cStartIdx_[jointIdx]]; quat[1] = gc_[cStartIdx_[jointIdx]+1]; 
         quat[2] = gc_[cStartIdx_[jointIdx]+2]; quat[3] = gc_[cStartIdx_[jointIdx]+3];
-        quat_ref[0] = gcRef_[cStartIdx_[jointIdx]]; quat_ref[1] = gcRef_[cStartIdx_[jointIdx]+1]; 
-        quat_ref[2] = gcRef_[cStartIdx_[jointIdx]+2]; quat_ref[3] = gcRef_[cStartIdx_[jointIdx]+3];
+        quatRef[0] = gcRef_[cStartIdx_[jointIdx]]; quatRef[1] = gcRef_[cStartIdx_[jointIdx]+1]; 
+        quatRef[2] = gcRef_[cStartIdx_[jointIdx]+2]; quatRef[3] = gcRef_[cStartIdx_[jointIdx]+3];
         raisim::quatToRotMat(quat, mat);
-        raisim::quatToRotMat(quat_ref, mat_ref);
-        raisim::mattransposematmul(mat, mat_ref, mat_err);
-        raisim::rotMatToQuat(mat_err, quat_err);
-        orn_err += std::pow(acos(std::max(std::min(1.0, quat_err[0]), -1.0)) * 2, 2);
+        raisim::quatToRotMat(quatRef, matRef);
+        raisim::mattransposematmul(mat, matRef, matErr);
+        raisim::rotMatToQuat(matErr, quatErr);
+        ornErr += std::pow(acos(std::max(std::min(1.0, quatErr[0]), -1.0)) * 2, 2);
       }
     }
 
-    orn_reward = exp(-ornScale_ * orn_err);
-    rewards_.record("orientation", orn_reward);
+    ornReward = exp(-ornScale_ * ornErr);
+    rewards_.record("orientation", ornReward);
 
     if (mask_){
-      vel_err = (gv_.segment(0, vStartIdx_[rShoulderIdx_]) - gvRef_.segment(0, vStartIdx_[rShoulderIdx_])).squaredNorm();
-      vel_err += (gv_.tail(gvDim_ - (vStartIdx_[rWristIdx_] + vDim_[rWristIdx_])) - gvRef_.tail(gvDim_ - (vStartIdx_[rWristIdx_] + vDim_[rWristIdx_]))).squaredNorm();
+      velErr = (gv_.segment(0, vStartIdx_[rShoulderIdx_]) - gvRef_.segment(0, vStartIdx_[rShoulderIdx_])).squaredNorm();
+      velErr += (gv_.tail(gvDim_ - (vStartIdx_[rWristIdx_] + vDim_[rWristIdx_])) - gvRef_.tail(gvDim_ - (vStartIdx_[rWristIdx_] + vDim_[rWristIdx_]))).squaredNorm();
     }
     else{
-      vel_err = (gv_.tail(controlDim_) - gvRef_.tail(controlDim_)).squaredNorm();
+      velErr = (gv_.tail(controlDim_) - gvRef_.tail(controlDim_)).squaredNorm();
     }
-    vel_reward = exp(- velScale_ * vel_err);
-    rewards_.record("velocity", vel_reward);
+    velReward = exp(- velScale_ * velErr);
+    rewards_.record("velocity", velReward);
 
     if (mask_){
-      ee_err = (ee_.segment(3, eeDim_ - 3) - eeRef_.segment(3, eeDim_ - 3)).squaredNorm();
+      eeErr = (ee_.segment(3, eeDim_ - 3) - eeRef_.segment(3, eeDim_ - 3)).squaredNorm();
     }
     else{
-      ee_err = (ee_ - eeRef_).squaredNorm();
+      eeErr = (ee_ - eeRef_).squaredNorm();
     }
-    ee_reward = exp(- eeScale_ * ee_err);
-    rewards_.record("end effector", ee_reward);
+    eeReward = exp(- eeScale_ * eeErr);
+    rewards_.record("end effector", eeReward);
 
     comRef_ = loopTurnAccumulated_ * comRef_;
     comRef_ = comRef_ + loopDisplacementAccumulated_.e();
 
-    com_err = (com_ - comRef_).squaredNorm();
-    com_reward = exp(-comScale_ * com_err);
-    rewards_.record("com", com_reward);
+    comErr = (com_ - comRef_).squaredNorm();
+    comReward = exp(-comScale_ * comErr);
+    rewards_.record("com", comReward);
     
-    double contact_reward = 0;
+    double contactReward = 0;
     if (groundHand_) {
-        contact_reward = 1;
+        contactReward = 1;
         groundHand_ = false;
     }
-    rewards_.record("contact", contact_reward);
+    rewards_.record("contact", contactReward);
 
-    double dist_reward = 0;
+    double distReward = 0;
     if (dribble_){
-      dist_reward += exp(-ballDist_);
+      distReward += exp(-ballDist_);
     }
-    rewards_.record("ball distance", dist_reward);
+    rewards_.record("ball distance", distReward);
   }
 
   void observe(Eigen::Ref<EigenVec> ob) final {
