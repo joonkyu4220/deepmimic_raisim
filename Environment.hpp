@@ -15,33 +15,26 @@ class ENVIRONMENT : public RaisimGymEnv {
   public:
     explicit ENVIRONMENT(const std::string& resourceDir, const Yaml::Node& cfg, bool visualizable) :
         RaisimGymEnv(resourceDir, cfg), visualizable_(visualizable) {
-
       setup(cfg);
-
-      setWorld(visualizable_);
-
+      setWorld();
       setCharacter();
-      
       setController();
-
       setBall();
-
       setData();
-
-      setAgent();
+      setAgent(cfg);
     }
 
   void init() final {}
 
   void setup(const Yaml::Node& cfg){
     // EXPERIMENT SETTINGS
-
     motionFileName_ = cfg["motion data"]["file name"].template As<std::string>();
     dataHasWrist_ = cfg["motion data"]["has wrist"].template As<bool>();
-    control_dt_ = 1.0 / cfg["motion data"]["fps"].template As<float>();
-    simulation_dt_ = cfg["simulation_dt"].template As<float>();
     isPreprocess_ = cfg["motion data"]["preprocess"].template As<bool>();
     visKin_ =cfg["motion data"]["visualize kinematic"].template As<bool>();
+
+    control_dt_ = 1.0 / cfg["motion data"]["fps"].template As<float>();
+    simulation_dt_ = cfg["simulation_dt"].template As<float>();
 
     useCharPhase_ = cfg["phase usage"]["character"].template As<bool>();
     useBallPhase_ = cfg["phase usage"]["ball"].template As<bool>();
@@ -56,17 +49,15 @@ class ENVIRONMENT : public RaisimGymEnv {
     mask_ = cfg["task"]["mask"].template As<bool>();
   }
 
-  void setWorld(bool visualizable){
-    // PHYSICS WORLD SETUP
+  void setWorld(){
     world_ = std::make_unique<raisim::World>();
-    if (visualizable) {
+    if (visualizable_) {
       server_ = std::make_unique<raisim::RaisimServer>(world_.get());
       server_->launchServer();
     }
     world_->addGround(0, "steel");
     world_->setERP(1.0);
-
-    world_->setMaterialPairProp("default",  "ball", 1.0, 0.8, 0.0001); // 0.8 <-> 0.0 for hard/soft contact
+    world_->setMaterialPairProp("default",  "ball", 1.0, 0.8, 0.0001);
     world_->setMaterialPairProp("default", "steel", 5.0, 0.0, 0.0001);
     world_->setMaterialPairProp("ball", "steel", 5.0, 0.85, 0.0001);
   }
@@ -88,64 +79,62 @@ class ENVIRONMENT : public RaisimGymEnv {
     gc_.setZero(gcDim_); gcInit_.setZero(gcDim_); gcRef_.setZero(gcDim_);
 
     gvDim_ = simChar_->getDOF(); // 40
+    controlDim_ = gvDim_ - 6;
     gv_.setZero(gvDim_); gvInit_.setZero(gvDim_); gvRef_.setZero(gvDim_);
     
     com_.setZero(comDim_); comRef_.setZero(comDim_);
     ee_.setZero(eeDim_); eeRef_.setZero(eeDim_);
+
   }
 
   void setController(){
-    // CONTROLLER SETUP
-    controlDim_ = gvDim_ - 6; // no control over root pos/orn
-    simChar_->setControlMode(raisim::ControlMode::PD_PLUS_FEEDFORWARD_TORQUE);
-
-    pTarget_.setZero(gcDim_);
-    vTarget_.setZero(gvDim_);
-
     Eigen::VectorXd jointPgain(gvDim_), jointDgain(gvDim_);
+    
     jointPgain.setZero(); jointPgain.tail(controlDim_).setConstant(250.0);
     jointDgain.setZero(); jointDgain.tail(controlDim_).setConstant(25.);
-    // neck
-    jointPgain.segment(vStartIdx_[neckIdx_], vDim_[neckIdx_]).setConstant(50.0);
-    jointDgain.segment(vStartIdx_[neckIdx_], vDim_[neckIdx_]).setConstant(5.0);
-    // ankles
-    jointPgain.segment(vStartIdx_[rAnkleIdx_], vDim_[rAnkleIdx_]).setConstant(150.0);
-    jointDgain.segment(vStartIdx_[rAnkleIdx_], vDim_[rAnkleIdx_]).setConstant(15.0);
-    jointPgain.segment(vStartIdx_[lAnkleIdx_], vDim_[lAnkleIdx_]).setConstant(150.0);
-    jointDgain.segment(vStartIdx_[lAnkleIdx_], vDim_[lAnkleIdx_]).setConstant(15.0);
-    // arms
-    jointPgain.segment(vStartIdx_[rShoulderIdx_], vDim_[rShoulderIdx_]).setConstant(50.0);
-    jointDgain.segment(vStartIdx_[rShoulderIdx_], vDim_[rShoulderIdx_]).setConstant(5.0);
-    jointPgain.segment(vStartIdx_[rElbowIdx_], vDim_[rElbowIdx_]).setConstant(50.0);
-    jointDgain.segment(vStartIdx_[rElbowIdx_], vDim_[rElbowIdx_]).setConstant(5.0);
-    jointPgain.segment(vStartIdx_[rWristIdx_], vDim_[rWristIdx_]).setConstant(50.0);
-    jointDgain.segment(vStartIdx_[rWristIdx_], vDim_[rWristIdx_]).setConstant(5.0);
-    jointPgain.segment(vStartIdx_[lShoulderIdx_], vDim_[lShoulderIdx_]).setConstant(50.0);
-    jointDgain.segment(vStartIdx_[lShoulderIdx_], vDim_[lShoulderIdx_]).setConstant(5.0);
-    jointPgain.segment(vStartIdx_[lElbowIdx_], vDim_[lElbowIdx_]).setConstant(50.0);
-    jointDgain.segment(vStartIdx_[lElbowIdx_], vDim_[lElbowIdx_]).setConstant(5.0);
-    jointPgain.segment(vStartIdx_[lWristIdx_], vDim_[lWristIdx_]).setConstant(50.0);
-    jointDgain.segment(vStartIdx_[lWristIdx_], vDim_[lWristIdx_]).setConstant(5.0);
+
+    jointPgain.segment(vStart_[neckIdx_], vDim_[neckIdx_]).setConstant(50.0);
+    jointDgain.segment(vStart_[neckIdx_], vDim_[neckIdx_]).setConstant(5.0);
+
+    jointPgain.segment(vStart_[rAnkleIdx_], vDim_[rAnkleIdx_]).setConstant(150.0);
+    jointDgain.segment(vStart_[rAnkleIdx_], vDim_[rAnkleIdx_]).setConstant(15.0);
+    jointPgain.segment(vStart_[lAnkleIdx_], vDim_[lAnkleIdx_]).setConstant(150.0);
+    jointDgain.segment(vStart_[lAnkleIdx_], vDim_[lAnkleIdx_]).setConstant(15.0);
+    jointPgain.segment(vStart_[rShoulderIdx_], vDim_[rShoulderIdx_]).setConstant(50.0);
+    jointDgain.segment(vStart_[rShoulderIdx_], vDim_[rShoulderIdx_]).setConstant(5.0);
+    jointPgain.segment(vStart_[rElbowIdx_], vDim_[rElbowIdx_]).setConstant(50.0);
+    jointDgain.segment(vStart_[rElbowIdx_], vDim_[rElbowIdx_]).setConstant(5.0);
+    jointPgain.segment(vStart_[rWristIdx_], vDim_[rWristIdx_]).setConstant(50.0);
+    jointDgain.segment(vStart_[rWristIdx_], vDim_[rWristIdx_]).setConstant(5.0);
+    jointPgain.segment(vStart_[lShoulderIdx_], vDim_[lShoulderIdx_]).setConstant(50.0);
+    jointDgain.segment(vStart_[lShoulderIdx_], vDim_[lShoulderIdx_]).setConstant(5.0);
+    jointPgain.segment(vStart_[lElbowIdx_], vDim_[lElbowIdx_]).setConstant(50.0);
+    jointDgain.segment(vStart_[lElbowIdx_], vDim_[lElbowIdx_]).setConstant(5.0);
+    jointPgain.segment(vStart_[lWristIdx_], vDim_[lWristIdx_]).setConstant(50.0);
+    jointDgain.segment(vStart_[lWristIdx_], vDim_[lWristIdx_]).setConstant(5.0);
+    
+    pTarget_.setZero(gcDim_);
+    vTarget_.setZero(gvDim_); 
     
     simChar_->setPdGains(jointPgain, jointDgain);
     simChar_->setGeneralizedForce(Eigen::VectorXd::Zero(gvDim_));
   }
 
   void setBall(){
-    // BALL
     ball_ = world_->addArticulatedSystem(resourceDir_ + "/ball3D.urdf");
     ball_->setName("ball");
     ball_->setIntegrationScheme(raisim::ArticulatedSystem::IntegrationScheme::RUNGE_KUTTA_4);
 
     ballGCDim_ = ball_->getGeneralizedCoordinateDim();
-    ballGCInit_.setZero(ballGCDim_);
-    ballGC_.setZero(ballGCDim_);
-
     ballGVDim_ = ball_->getDOF();
+
+    ballGCInit_.setZero(ballGCDim_);
     ballGVInit_.setZero(ballGVDim_);
+
+    ballGC_.setZero(ballGCDim_);
     ballGV_.setZero(ballGVDim_);
   }
-
+  
   void setData(){
     // DATA PREPARATION
     loadData();
@@ -155,10 +144,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     loadGT();
   }
 
-  void setAgent(){
-    // AGENT
-    stateDim_ = obDim_; // TODO
-    stateDouble_.setZero(stateDim_); // TODO
+  void setAgent(const Yaml::Node& cfg){
     obDim_ = (posDim_) + (posDim_) + (gcDim_ - 7) + (gvDim_ - 6);
     /*
     joint positions 3 * 14 || 0~41
@@ -169,7 +155,6 @@ class ENVIRONMENT : public RaisimGymEnv {
     if (useBallState_) obDim_ += 6;
     if (useBallPhase_) obDim_ += 2;
     if (useCharPhase_) obDim_ += 2;
-
     /*
     (optional)
     ball position 3 || 162~164
@@ -178,7 +163,12 @@ class ENVIRONMENT : public RaisimGymEnv {
     ball phase 2
     */
     obDouble_.setZero(obDim_);
-    actionDim_ = gcDim_ - 7; // TODO: 6D? quatToRotMat and rotMatToQuat seems handy
+
+    stateDim_ = obDim_; // TODO
+    stateDouble_.setZero(stateDim_); // TODO
+
+    actionDim_ = gcDim_ - 7; // TODO: 6D? quatToRotMat and rotMatToQuat seems handy / or additional joint torques?
+
     rewards_.initializeFromConfigurationFile(cfg_["reward"]);
   }
 
@@ -190,7 +180,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     while (gcfile >> data) {
       dataGC_.coeffRef(row, col) = data;
       col++;
-      if (!dataHasWrist_ && (col == cStartIdx_[rWristIdx_] || col == cStartIdx_[lWristIdx_])){ // skip the wrist joints
+      if (!dataHasWrist_ && (col == cStart_[rWristIdx_] || col == cStart_[lWristIdx_])){ // skip the wrist joints
         dataGC_.coeffRef(row, col) = 1; dataGC_.coeffRef(row, col + 1) = 0; dataGC_.coeffRef(row, col + 2) = 0; dataGC_.coeffRef(row, col + 3) = 0;
         col += 4;
       }
@@ -248,13 +238,13 @@ class ENVIRONMENT : public RaisimGymEnv {
       dataGV_.row(frameIdx).segment(3, 3) = getAngularVelocity(prevGC, nextGC, dt);
 
       for (int jointIdx = 0; jointIdx < nJoints_; jointIdx++){
-        prevGC = prevFrame.segment(cStartIdx_[jointIdx], cDim_[jointIdx]);
-        nextGC = nextFrame.segment(cStartIdx_[jointIdx], cDim_[jointIdx]);
+        prevGC = prevFrame.segment(cStart_[jointIdx], cDim_[jointIdx]);
+        nextGC = nextFrame.segment(cStart_[jointIdx], cDim_[jointIdx]);
         if (cDim_[jointIdx] == 1) {
-          dataGV_.row(frameIdx).segment(vStartIdx_[jointIdx], vDim_[jointIdx]) = (nextGC - prevGC) / dt;
+          dataGV_.row(frameIdx).segment(vStart_[jointIdx], vDim_[jointIdx]) = (nextGC - prevGC) / dt;
         }
         else {
-          dataGV_.row(frameIdx).segment(vStartIdx_[jointIdx], vDim_[jointIdx]) = getAngularVelocity(prevGC, nextGC, dt);
+          dataGV_.row(frameIdx).segment(vStart_[jointIdx], vDim_[jointIdx]) = getAngularVelocity(prevGC, nextGC, dt);
         }
       }
     }
@@ -355,6 +345,32 @@ class ENVIRONMENT : public RaisimGymEnv {
     }
     raisim::quatToRotMat(loop_turn_quat, loopTurn_);
   }
+  
+  void read_data(){
+    std::ifstream gcfile(resourceDir_ + "/walk.txt");
+    float data;
+    int i = 0, j = 0;
+    while (gcfile >> data){
+      dataGC_.coeffRef(j, i) = data;
+      i++;
+      // if (i >= gcDim_){
+        if (i >= gcDim_ - 8){
+        i = 0;
+        j++;
+      }
+    }
+    // std::ifstream gvfile(resourceDir_ + "/walk_gv.txt");
+    // i = 0; j = 0;
+    // while (gvfile >> data){
+    //   data_gv_.coeffRef(j, i) = data;
+    //   i++;
+    //   // if (i >= gvDim_){
+    //   if (i >= gvDim_ - 6){
+    //     i = 0;
+    //     j++;
+    //   }
+    // }
+  }
 
   void reset() final {
     sim_step_ = 0;
@@ -363,10 +379,9 @@ class ENVIRONMENT : public RaisimGymEnv {
     nLoops_ = 0;
     loopDisplacementAccumulated_.setZero();
     loopTurnAccumulated_.setIdentity(); // raisim::quatToRotMat({1, 0, 0, 0}, loop_turn_acc_);
-
+    
     initializeCharacter();
     initializeBall();
-    
     // flags
     resetFlags();
 
@@ -382,14 +397,14 @@ class ENVIRONMENT : public RaisimGymEnv {
     
     // TODO: Noisier initialization scheme as the learning progresses
     if (dribble_){
-      // gcInit_[cStartIdx_[2]] = 1; gcInit_[cStartIdx_[2] + 1] = 0; gcInit_[cStartIdx_[2] + 2] = 0; gcInit_[cStartIdx_[2] + 3] = 0;
-      gcInit_[cStartIdx_[2]] = 0.866; gcInit_[cStartIdx_[2] + 1] = -0.5; gcInit_[cStartIdx_[2] + 2] = 0; gcInit_[cStartIdx_[2] + 3] = 0;
-      gcInit_[cStartIdx_[3]] = 1.57;
-      gcInit_[cStartIdx_[4]] = 0.966; gcInit_[cStartIdx_[4] + 1] = 0; gcInit_[cStartIdx_[4] + 2] = 0.259; gcInit_[cStartIdx_[4] + 3] = 0;
+      // gcInit_[cStartIdx_[2]] = 1; gcInit_[cStartIdx_[2] + 1] = 0; gcInit_[cStartIdx_[2] + 2] = 0; gcInit_[cStartIdx_[2] + 3] = 0; 
+      gcInit_[cStart_[2]] = 0.866; gcInit_[cStart_[2] + 1] = -0.5; gcInit_[cStart_[2] + 2] = 0; gcInit_[cStart_[2] + 3] = 0;
+      gcInit_[cStart_[3]] = 1.57;
+      gcInit_[cStart_[4]] = 0.966; gcInit_[cStart_[4] + 1] = 0; gcInit_[cStart_[4] + 2] = 0.259; gcInit_[cStart_[4] + 3] = 0;
 
-      gvInit_[vStartIdx_[2]] = 0; gvInit_[vStartIdx_[2] + 1] = 0; gvInit_[vStartIdx_[2] + 2] = 0;
-      gvInit_[vStartIdx_[3]] = 0;
-      gvInit_[vStartIdx_[4]] = 0; gvInit_[vStartIdx_[4] + 1] = 0; gvInit_[vStartIdx_[4] + 2] = 0;
+      gvInit_[vStart_[2]] = 0; gvInit_[vStart_[2] + 1] = 0; gvInit_[vStart_[2] + 2] = 0;
+      gvInit_[vStart_[3]] = 0;
+      gvInit_[vStart_[4]] = 0; gvInit_[vStart_[4] + 1] = 0; gvInit_[vStart_[4] + 2] = 0;
     }
     
     pTarget_ << gcInit_;
@@ -406,17 +421,20 @@ class ENVIRONMENT : public RaisimGymEnv {
       size_t rightHandIdx = simChar_->getFrameIdxByName("right_wrist"); // 9
       simChar_->getFramePosition(rightHandIdx, rightHandPos);
       // ballGCInit_[0] = rightHandPos[0] + 0.1;
-      ballGCInit_[0] = rightHandPos[0] + 0.1;
+      ballGCInit_[0] = rightHandPos[0] + 0.08850; // half the hand size
       ballGCInit_[1] = rightHandPos[1];
       ballGCInit_[2] = rightHandPos[2] - 0.151; // ball 0.11, hand 0.03
       ballGCInit_[3] = 1;
 
+      ballGVInit_[0] = gvInit_[0];
+      ballGVInit_[1] = gvInit_[1];
       ballGVInit_[2] = 0.05;
     }
     else{
       ballGCInit_[0] = 0; ballGCInit_[1] = 100; ballGCInit_[2] = 5; ballGCInit_[3] = 1;
     }
     ball_->setState(ballGCInit_, ballGVInit_);
+    
   }
 
   void resetFlags(){
@@ -425,7 +443,6 @@ class ENVIRONMENT : public RaisimGymEnv {
     isGround_ = false;
     isHand_ = false;
     groundHand_ = false;
-
     fallFlag_ = false;
     contactTerminalFlag_ = false;
   }
@@ -446,7 +463,6 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     // joint pos, orn, linvel, angvel
     for(size_t bodyIdx = 1; bodyIdx < nJoints_ + 1; bodyIdx++){
-      
       simChar_->getBodyPosition(bodyIdx, jointPos_W);
       matvecmul(rootRotInv, jointPos_W - rootPos, jointPos_B);
       obDouble_.segment(obIdx, 3) = jointPos_B.e();
@@ -478,7 +494,10 @@ class ENVIRONMENT : public RaisimGymEnv {
         obIdx += 3;
         obDouble_.segment(obIdx, 3) = jointVel_B.e();
         obIdx += 3;
-        ballDist_ = (obDouble_[47] - obDouble_[162]) * (obDouble_[47] - obDouble_[162]) + (obDouble_[48] - obDouble_[163]) * (obDouble_[48] - obDouble_[163]);
+        Vec<3> rHandPos_W;
+        simChar_->getPosition(rWristIdx_ + 1, rHandCenter, rHandPos_W);
+        ballDist_ = (rHandPos_W[0] - ballGC_[0]) * (rHandPos_W[0] - ballGC_[0]) + (rHandPos_W[1] - ballGC_[1]) * (rHandPos_W[1] - ballGC_[1]);
+        
       }
       else{ // for transfer learning?
         obDouble_.segment(obIdx, 6).setZero();
@@ -553,8 +572,7 @@ class ENVIRONMENT : public RaisimGymEnv {
         checkBallContact();
       }
       
-      // checkCharacterContact(); // todo
-      
+      checkCharacterContact();
     }
 
     setBallPhaseSpeed();
@@ -680,13 +698,13 @@ class ENVIRONMENT : public RaisimGymEnv {
       }
       if (cDim_[jointIdx] == 1)
       {
-        ornErr += std::pow(gc_[cStartIdx_[jointIdx]] - gcRef_[cStartIdx_[jointIdx]], 2);
+        ornErr += std::pow(gc_[cStart_[jointIdx]] - gcRef_[cStart_[jointIdx]], 2);
       }
       else {
-        quat[0] = gc_[cStartIdx_[jointIdx]]; quat[1] = gc_[cStartIdx_[jointIdx]+1]; 
-        quat[2] = gc_[cStartIdx_[jointIdx]+2]; quat[3] = gc_[cStartIdx_[jointIdx]+3];
-        quatRef[0] = gcRef_[cStartIdx_[jointIdx]]; quatRef[1] = gcRef_[cStartIdx_[jointIdx]+1]; 
-        quatRef[2] = gcRef_[cStartIdx_[jointIdx]+2]; quatRef[3] = gcRef_[cStartIdx_[jointIdx]+3];
+        quat[0] = gc_[cStart_[jointIdx]]; quat[1] = gc_[cStart_[jointIdx]+1]; 
+        quat[2] = gc_[cStart_[jointIdx]+2]; quat[3] = gc_[cStart_[jointIdx]+3];
+        quatRef[0] = gcRef_[cStart_[jointIdx]]; quatRef[1] = gcRef_[cStart_[jointIdx]+1]; 
+        quatRef[2] = gcRef_[cStart_[jointIdx]+2]; quatRef[3] = gcRef_[cStart_[jointIdx]+3];
         raisim::quatToRotMat(quat, mat);
         raisim::quatToRotMat(quatRef, matRef);
         raisim::mattransposematmul(mat, matRef, matErr);
@@ -699,8 +717,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     rewards_.record("orientation", ornReward);
 
     if (mask_){
-      velErr = (gv_.segment(0, vStartIdx_[rShoulderIdx_]) - gvRef_.segment(0, vStartIdx_[rShoulderIdx_])).squaredNorm();
-      velErr += (gv_.tail(gvDim_ - (vStartIdx_[rWristIdx_] + vDim_[rWristIdx_])) - gvRef_.tail(gvDim_ - (vStartIdx_[rWristIdx_] + vDim_[rWristIdx_]))).squaredNorm();
+      velErr = (gv_.segment(0, vStart_[rShoulderIdx_]) - gvRef_.segment(0, vStart_[rShoulderIdx_])).squaredNorm();
+      velErr += (gv_.tail(gvDim_ - (vStart_[rWristIdx_] + vDim_[rWristIdx_])) - gvRef_.tail(gvDim_ - (vStart_[rWristIdx_] + vDim_[rWristIdx_]))).squaredNorm();
     }
     else{
       velErr = (gv_.tail(controlDim_) - gvRef_.tail(controlDim_)).squaredNorm();
@@ -737,7 +755,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     }
     rewards_.record("ball distance", distReward);
   }
-
+  
   void observe(Eigen::Ref<EigenVec> ob) final {
     ob = obDouble_.cast<float>();
   }
@@ -754,118 +772,98 @@ class ENVIRONMENT : public RaisimGymEnv {
     return float(total_reward_);
   }
 
-
-
-
-  int isTerminalState(float& terminalReward) final {
-
-    if (time_limit_reached()) return 4;
-    
+  bool isTerminalState(float& terminalReward) final {
     // low root height
     if (fallFlag_) {
-      return 1;
+      return true;
     }
+
     if (dribble_){
       // unwanted contact state
       if (contactTerminalFlag_) {
-        return 2;
+        return true;
       }
 
       // ball too far
-      if (ballDist_ > 1.0 || ballGC_[2] > 2.0){
-        return 3;
+      if (ballDist_ > ballDistThreshold_){
+        return true;
       }
     }
-    return 0;
+    return false;
   }
 
   private:
-
-    bool dribble_ = false;
-
-    bool isPreprocess_ = false;
-
-    bool useBallState_ = false;
-    bool mask_ = false;
+    bool dribble_, useBallState_, mask_;
+    std::string motionFileName_;
+    bool dataHasWrist_, isPreprocess_, visKin_, useCharPhase_, useBallPhase_;
+    float ornScale_, velScale_, eeScale_, comScale_;
 
     bool visualizable_ = false;
-
-    bool visKin_ = false;
     raisim::ArticulatedSystem *simChar_, *kinChar_;
     raisim::ArticulatedSystem *ball_;
 
+    int nJoints_ = 14;
+    
+    int chestIdx_ = 0;
+    int neckIdx_ = 1;
+    int rShoulderIdx_ = 2;
+    int rElbowIdx_ = 3;
+    int rWristIdx_ = 4;
+    int lShoulderIdx_ = 5;
+    int lElbowIdx_ = 6;
+    int lWristIdx_ = 7;
+    int rHipIdx_ = 8;
+    int rKneeIdx_ = 9;
+    int rAnkleIdx_ = 10;
+    int lHipIdx_ = 11;
+    int lKneeIdx_ = 12;
+    int lAnkleIdx_ = 13;
+
+    int cStart_[14] = {7, 11,  15, 19, 20,  24, 28, 29,  33, 37, 38,  42, 46, 47};
+    int vStart_[14] = {6,  9,  12, 15, 16,  19, 22, 23,  26, 29, 30,  33, 36, 37};
+    int cDim_[14] = {4, 4,  4, 1, 4,  4, 1, 4,  4, 1, 4,  4, 1, 4};
+    int vDim_[14] = {3, 3,  3, 1, 3,  3, 1, 3,  3, 1, 3,  3, 1, 3};
+    int isEE_[14] = {0, 0,  0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1};
+    int isRightArm_[14] = {0, 0,  1, 1, 1,  0, 0, 0,  0, 0, 0,  0, 0, 0};
+
+
+    Vec<3> rHandCenter = {0, -0.08850, 0};
+
+
     int gcDim_, gvDim_, controlDim_, ballGCDim_, ballGVDim_;
-    
-    Eigen::VectorXd ballGC_, ballGV_, ballGCInit_, ballGVInit_;
+    int posDim_ = 3 * nJoints_, comDim_ = 3, eeDim_ = 12;
+
     Eigen::VectorXd gc_, gv_, gcInit_, gvInit_, gcRef_, gvRef_;
-    
-    Eigen::VectorXd com_, comRef_, ee_, eeRef_;
-
-    float ballDist_;
-
-    int dataLen_;
-    std::string motionFileName_;
-    int dataHasWrist_ = false;
-    int maxLen_ = 1000;
-    int index_ = 0;
-
     Eigen::MatrixXd dataGC_, dataGV_, dataEE_, dataCom_;
+    Eigen::VectorXd com_, comRef_, ee_, eeRef_;
+    
+    Vec<3> loopDisplacement_;
+    Mat<3,3> loopTurn_;
+    Vec<3> loopDisplacementAccumulated_;
+    Mat<3,3> loopTurnAccumulated_;
 
     Eigen::VectorXd pTarget_, vTarget_;
-
     Eigen::VectorXd obDouble_, stateDouble_;
+    
+    Eigen::VectorXd ballGC_, ballGV_, ballGCInit_, ballGVInit_;
+
+    int maxLen_ = 1000;
+    int dataLen_;
+    int index_ = 0;
+
+    float charPhase_ = 0, charPhaseSpeed_ = 0;
+    float ballPhase_ = 0, ballPhaseSpeed_ = 0;
+    float rootHeightThreshold_ = 0.5, ballDistThreshold_ = 0.5;
+    float ballDist_;
 
     int sim_step_ = 0;
     int max_sim_step_ = 2000;
     double total_reward_ = 0;
 
-    int nJoints_ = 14;
-
-    int posDim_ = 3 * nJoints_, comDim_ = 3, eeDim_ = 12;
-
-    int cStartIdx_[14] = {7, 11,  15, 19, 20,  24, 28, 29,  33, 37, 38,  42, 46, 47};
-    int vStartIdx_[14] = {6,  9,  12, 15, 16,  19, 22, 23,  26, 29, 30,  33, 36, 37};
-    int cDim_[14] = {4, 4,  4, 1, 4,  4, 1, 4,  4, 1, 4,  4, 1, 4};
-    int vDim_[14] = {3, 3,  3, 1, 3,  3, 1, 3,  3, 1, 3,  3, 1, 3};
-    int isEE_[14] = {0, 0,  0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1};
-    int isRightArm_[14] = {0, 0,  1, 1, 1,  0, 0, 0,  0, 0, 0,  0, 0, 0};
+    bool contactTerminalFlag_ = false, fallFlag_ = false;
+    bool fromGround_ = false, fromHand_ = false, isGround_ = false, isHand_ = false, groundHand_ = false;
     
-    int chestIdx_ = 0, neckIdx_ = 1;
-    int rShoulderIdx_ = 2, rElbowIdx_ = 3, rWristIdx_ = 4;
-    int lShoulderIdx_ = 5, lElbowIdx_ = 6, lWristIdx_ = 7;
-    int rHipIdx_ = 8, rKneeIdx_ = 9, rAnkleIdx_ = 10;
-    int lHipIdx_ = 11, lKneeIdx_ = 12, lAnkleIdx_ = 13;
-    
-    float ornScale_, velScale_, eeScale_, comScale_;
-
-    int eePosStart[4] = {12, 21, 30, 39};
-
-    bool contactTerminalFlag_ = false;
-    float rootHeightThreshold_ = 0.5;
-    bool fallFlag_ = false;
-
-    bool fromGround_ = false;
-    bool fromHand_ = false;
-    bool isGround_ = false;
-    bool isHand_ = false;
-    bool groundHand_ = false;
-
     int nLoops_;
-
-    bool useCharPhase_ = false;
-    float charPhase_ = 0;
-    float charPhaseSpeed_ = 0;
-    float charMaxPhase_ = M_PI * 2;
-    bool useBallPhase_ = false;
-    float ballPhase_ = 0;
-    float ballPhaseSpeed_ = 0;
-    float ballMaxPhase_ = M_PI * 2;
-
-    Vec<3> loopDisplacement_;
-    Mat<3,3> loopTurn_;
-
-    Vec<3> loopDisplacementAccumulated_;
-    Mat<3,3> loopTurnAccumulated_;
 };
 
 }

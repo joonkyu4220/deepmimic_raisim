@@ -52,7 +52,7 @@ class PPOStorage:
         self.sample_counter %= self.max_samples
         self.sample_counter += batch_size
         return self.states[self.sample_counter-batch_size:self.sample_counter, :], self.q_values[self.sample_counter-batch_size:self.sample_counter, :]
-    
+        
     def actor_sample(self, batch_size):
         if self.sample_counter == 0 or self.sample_counter == self.max_samples:
             self.permute()
@@ -61,11 +61,11 @@ class PPOStorage:
         return self.states[self.sample_counter-batch_size:self.sample_counter, :], self.actions[self.sample_counter-batch_size:self.sample_counter, :], self.q_values[self.sample_counter-batch_size:self.sample_counter, :], self.log_probs[self.sample_counter-batch_size:self.sample_counter]
 
     def permute(self):
-        permuted_index = torch.randperm(self.max_samples)
-        self.states[:, :] = self.states[permuted_index, :]
-        self.actions[:, :] = self.actions[permuted_index, :]
-        self.q_values[:, :] = self.q_values[permuted_index, :]
-        self.log_probs[:] = self.log_probs[permuted_index]
+            permuted_index = torch.randperm(self.max_samples)
+            self.states[:, :] = self.states[permuted_index, :]
+            self.actions[:, :] = self.actions[permuted_index, :]
+            self.q_values[:, :] = self.q_values[permuted_index, :]
+            self.log_probs[:] = self.log_probs[permuted_index]
  
 class RL(object):
     def __init__(self, env, hidden_layer=[64, 64]):
@@ -75,43 +75,34 @@ class RL(object):
         self.hidden_layer = hidden_layer
  
         self.params = Params()
+        #    self.Net = ActorCriticNetMann
         self.Net = ActorCriticNet
         self.model = self.Net(self.num_inputs, self.num_outputs, self.hidden_layer)
         self.model.share_memory()
         self.test_mean = []
         self.test_std = []
- 
+    
         self.noisy_test_mean = []
         self.noisy_test_std = []
-
-        # reward logging
-        self.noisy_test_mean_by_name = {}
-        self.noisy_test_std_by_name = {}
-
-        # termination logging
-        self.trigger_count = []
-
-        self.fig = plt.figure(figsize=(16, 10))
+        self.fig = plt.figure()
         #self.fig2 = plt.figure()
         self.lr = self.params.lr
         plt.show(block=False)
- 
+    
         self.test_list = []
         self.noisy_test_list = []
- 
+    
         self.gpu_model = self.Net(self.num_inputs, self.num_outputs,self.hidden_layer)
         self.gpu_model.to(device)
         self.model_old = self.Net(self.num_inputs, self.num_outputs, self.hidden_layer).to(device)
- 
+    
         self.base_controller = None
         self.base_policy = None
- 
+    
         self.total_rewards = []
-        # reward logging
-        self.reward_info = []
-        self.total_reward_info = {}
 
-
+        self.writer = None
+ 
     def normalize_data(self, num_iter=1000, file='shared_obs_stats.pkl'):
         state = self.env.reset()
         state = Variable(torch.Tensor(state).unsqueeze(0))
@@ -124,9 +115,9 @@ class RL(object):
     
             if done:
                 state = self.env.reset()
- 
+    
             state = Variable(torch.Tensor(state).unsqueeze(0))
- 
+    
         with open(file, 'wb') as output:
             pickle.dump(self.shared_obs_stats, output, pickle.HIGHEST_PROTOCOL)
  
@@ -159,7 +150,7 @@ class RL(object):
         self.test_std.append(reward_std)
         self.test_list.append((reward_mean, reward_std))
         #print(self.model.state_dict())
-    
+ 
     def run_test_with_noise(self, num_test=10):
         reward_mean = statistics.mean(self.total_rewards)
         reward_std = statistics.stdev(self.total_rewards)
@@ -167,19 +158,6 @@ class RL(object):
         self.noisy_test_mean.append(reward_mean)
         self.noisy_test_std.append(reward_std)
         self.noisy_test_list.append((reward_mean, reward_std))
-
-        for key in self.total_reward_info.keys():
-            if not(key in self.noisy_test_mean_by_name): self.noisy_test_mean_by_name[key]  = []
-            if not(key in self.noisy_test_std_by_name): self.noisy_test_std_by_name[key]  = []
-            self.noisy_test_mean_by_name[key].append(statistics.mean(self.total_reward_info[key]))
-            self.noisy_test_std_by_name[key].append(statistics.stdev(self.total_reward_info[key]))
-
-
-        # trigger logging
-        total_triggers = np.sum(self.env._done_count)
-        ratio = [trigger / total_triggers for trigger in self.env._done_count]
-        self.trigger_count.append(ratio)
-        self.env._done_count = np.zeros(self.env._done_count.shape[0])
     
         print("reward mean,", reward_mean)
         print("reward std,", reward_std)
@@ -189,95 +167,30 @@ class RL(object):
             np.save(f, np.array(self.noisy_test_mean))
             np.save(f, np.array(self.noisy_test_std))
     
-
-
     def plot_statistics(self):
         plt.clf()
-
+    
+        ax = self.fig.add_subplot(121)
+        #ax2 = self.fig.add_subplot(122)
+        low = []
+        high = []
         index = []
         noisy_low = []
         noisy_high = []
-        noisy_low_by_name = {}
-        noisy_high_by_name = {}
         for i in range(len(self.noisy_test_mean)):
             noisy_low.append(self.noisy_test_mean[i]-self.noisy_test_std[i])
             noisy_high.append(self.noisy_test_mean[i]+self.noisy_test_std[i])
-
-            for key in self.total_reward_info.keys():
-                if not(key in noisy_low_by_name): noisy_low_by_name[key] = []
-                if not(key in noisy_high_by_name): noisy_high_by_name[key] = []
-                noisy_low_by_name[key].append(self.noisy_test_mean_by_name[key][i] - self.noisy_test_std_by_name[key][i])
-                noisy_high_by_name[key].append(self.noisy_test_mean_by_name[key][i] + self.noisy_test_std_by_name[key][i])
-
             index.append(i)
-        
-        ax1 = self.fig.add_subplot(241)
-        ax1.set_title("orientation reward")
-        ax1.plot(self.noisy_test_mean_by_name["orientation"], 'g')
-        ax1.fill_between(index, noisy_low_by_name["orientation"], noisy_high_by_name["orientation"], color='r')
-
-        ax2 = self.fig.add_subplot(242)
-        ax2.set_title("velocity reward")
-        ax2.plot(self.noisy_test_mean_by_name["velocity"], 'g')
-        ax2.fill_between(index, noisy_low_by_name["velocity"], noisy_high_by_name["velocity"], color='r')
-
-        ax3 = self.fig.add_subplot(243)
-        ax3.set_title("end-effector reward")
-        ax3.plot(self.noisy_test_mean_by_name["end effector"], 'g')
-        ax3.fill_between(index, noisy_low_by_name["end effector"], noisy_high_by_name["end effector"], color='r')
-
-        ax4 = self.fig.add_subplot(244)
-        ax4.set_title("center-of-mass reward")
-        ax4.plot(self.noisy_test_mean_by_name["com"], 'g')
-        ax4.fill_between(index, noisy_low_by_name["com"], noisy_high_by_name["com"], color='r')
-
-        ax5 = self.fig.add_subplot(245)
-        ax5.set_title("ball contact reward")
-        ax5.plot(self.noisy_test_mean_by_name["contact"], 'g')
-        ax5.fill_between(index, noisy_low_by_name["contact"], noisy_high_by_name["contact"], color='r')
-
-        ax6 = self.fig.add_subplot(246)
-        ax6.set_title("ball distance reward")
-        ax6.plot(self.noisy_test_mean_by_name["ball distance"], 'g')
-        ax6.fill_between(index, noisy_low_by_name["ball distance"], noisy_high_by_name["ball distance"], color='r')
-
-        ax7 = self.fig.add_subplot(247)
-        ax7.set_title("total reward")
-        ax7.plot(self.noisy_test_mean, 'g')
-        ax7.fill_between(index, noisy_low, noisy_high, color='r')
-        
-        ax8 = self.fig.add_subplot(248)
-        ax8.set_title("triggered condition")
-        ax8.plot([ratio[0] for ratio in self.trigger_count], 'r')
-        ax8.plot([ratio[1] for ratio in self.trigger_count], 'g')
-        ax8.plot([ratio[2] for ratio in self.trigger_count], 'b')
-        ax8.plot([ratio[3] for ratio in self.trigger_count], 'black')
-
+        plt.xlabel('iterations')
+        plt.ylabel('average rewards')
+        #ax.plot(self.test_mean, 'b')
+        ax.plot(self.noisy_test_mean, 'g')
+        #ax.fill_between(index, low, high, color='cyan')
+        ax.fill_between(index, noisy_low, noisy_high, color='r')
+        #ax.plot(map(sub, test_mean, test_std))
         self.fig.canvas.draw()
-
-        np.savetxt(self.model_name + "orientation_mean.txt", np.array(self.noisy_test_mean_by_name["orientation"]))
-        np.savetxt(self.model_name + "orientation_low.txt", np.array(self.noisy_test_std_by_name["orientation"]))
-
-        np.savetxt(self.model_name + "velocity_mean.txt", np.array(self.noisy_test_mean_by_name["velocity"]))
-        np.savetxt(self.model_name + "velocity_low.txt",        np.array(self.noisy_test_std_by_name["velocity"]))
-
-        np.savetxt(self.model_name + "endeffector_mean.txt", np.array(self.noisy_test_mean_by_name["end effector"]))
-        np.savetxt(self.model_name + "endeffector_low.txt",        np.array(self.noisy_test_std_by_name["end effector"]))
-
-        np.savetxt(self.model_name + "com_mean.txt", np.array(self.noisy_test_mean_by_name["com"]))
-        np.savetxt(self.model_name + "com_low.txt",        np.array(self.noisy_test_std_by_name["com"]))
-
-        np.savetxt(self.model_name + "contact_mean.txt", np.array(self.noisy_test_mean_by_name["contact"]))
-        np.savetxt(self.model_name + "contact_low.txt",        np.array(self.noisy_test_std_by_name["contact"]))
-
-        np.savetxt(self.model_name + "balldistance_mean.txt", np.array(self.noisy_test_mean_by_name["ball distance"]))
-        np.savetxt(self.model_name + "balldistance_low.txt",        np.array(self.noisy_test_mean_by_name["ball distance"]))
-
-        np.savetxt(self.model_name + "total_mean.txt", np.array(self.noisy_test_mean))
-        np.savetxt(self.model_name + "total_low.txt",        np.array(self.noisy_test_std))
-
-        np.savetxt(self.model_name + "triggercount.txt", np.array(self.trigger_count))
-    
+        # plt.savefig("test.png")
+ 
     def collect_samples_vec(self, num_samples, start_state=None, noise=-2.5, env_index=0, random_seed=1):
         #    print("COLLECT SAMPLES..")
         start_state = self.env.observe()
@@ -294,7 +207,7 @@ class RL(object):
         dones = []
         noise = self.base_noise * self.explore_noise.value
         self.gpu_model.set_noise(noise)
- 
+    
         state = start_state
         total_reward1 = 0
         total_reward2 = 0
@@ -335,13 +248,10 @@ class RL(object):
             self.storage.push(states[i], actions[i], next_states[i], rewards[i], q_values[i], log_probs[i], self.num_envs)
         self.total_rewards = self.env.total_rewards.cpu().numpy().tolist()
         print("processing time", time.time() - start)
-        # reward logging
-        self.reward_info = self.env.reward_info
-        for key in self.reward_info[0].keys():
-            self.total_reward_info[key] = []
-            for i in range(self.num_envs):
-                self.total_reward_info[key].append(self.reward_info[i][key])
 
+        
+                
+        
     
     def update_critic(self, batch_size, num_epoch):
         self.gpu_model.train()
@@ -354,15 +264,15 @@ class RL(object):
             batch_states, batch_q_values = storage.critic_sample(batch_size)
             batch_q_values = batch_q_values
             v_pred = gpu_model.get_value(batch_states)
-
+            
             loss_value = (v_pred - batch_q_values)**2
             loss_value = 0.5 * loss_value.mean()
 
             optimizer.zero_grad()
             loss_value.backward()
             optimizer.step()
-
-    
+           
+ 
     def update_actor(self, batch_size, num_epoch):
         self.gpu_model.train()
 
@@ -392,7 +302,7 @@ class RL(object):
             loss_clip = -(torch.min(surr1, surr2)).mean()
 
             total_loss = loss_clip + 0.001 * (mean_actions**2).mean()
-
+            
             optimizer.zero_grad()
             total_loss.backward()
             optimizer.step()
@@ -440,27 +350,37 @@ class RL(object):
         self.env.reset()
         for iterations in range(200000):
             iteration_start = time.time()
-            #    print(self.model_name)
+            print(self.model_name)
             while self.storage.counter < max_samples:
                 self.collect_samples_vec(100, noise=noise)
                 #    print(f"{self.storage.counter}/{max_samples}")
+
+            # reward logging
+            reward_info = {key:0 for key in self.env.reward_info[0].keys()}
+            for env_info in self.env.reward_info:
+                for (reward_name, reward_value) in env_info.items():
+                    reward_info[reward_name] += reward_value
+            for key in self.env.reward_info[0].keys():
+                self.writer.add_scalar("Reward/" + key, reward_info[key]/self.num_envs, iterations)
+
+
             start = time.time()
 
             self.update_critic(max_samples//4, 20)
             self.update_actor(max_samples//4, 20)
             self.storage.clear()
     
-            if (iterations+1) % 500 == 0:
-                self.run_test_with_noise(num_test=2)
-                self.plot_statistics()
-                # plt.savefig("test.png")
+            #    if (iterations+1) % 100 == 0:
+            #        self.run_test_with_noise(num_test=2)
+            #        self.plot_statistics()
+            #        # plt.savefig("test.png")
 
             print("update policy time", time.time()-start)
             print("iteration time", iterations, time.time()-iteration_start)
     
             if (iterations+0) % 1000 == 999:
                 self.save_model(self.model_name+"iter%d.pt"%(iterations))
-                plt.savefig(self.model_name+"test.png")
+                #    plt.savefig(self.model_name+"test.png")
     
         self.save_reward_stats("reward_stats.npy")
         self.save_model(self.model_name+"final.pt")
@@ -489,8 +409,10 @@ if __name__ == '__main__':
     from torch.autograd import Variable
     import torch.utils.data
     from model import ActorCriticNet, ActorCriticNetMann
+    from torch.utils.tensorboard import SummaryWriter
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    
+
     seed = 3 #8
     random.seed(seed)
     torch.manual_seed(seed)
@@ -513,15 +435,15 @@ if __name__ == '__main__':
     
     ppo.base_dim = ppo.num_inputs
     
-    ppo.model_name = task_path + "/stats/20221109_final/"
+    ppo.model_name = task_path + "/stats/20221115_walk541/"
+
+    ppo.writer = SummaryWriter(log_dir=ppo.model_name + "tensorboard")
     
     if not(os.path.isdir(ppo.model_name)):
         os.mkdir(ppo.model_name)
     import shutil
     shutil.copy(task_path + "/cfg.yaml", ppo.model_name + "cfg.yaml")
-    
 
     training_start = time.time()
     ppo.collect_samples_multithread()
     print("training time", time.time()-training_start)
-     
