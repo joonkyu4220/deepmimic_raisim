@@ -357,7 +357,7 @@ class RL(object):
                     reward_info[reward_name] += reward_value
             for key in self.env.reward_info[0].keys():
                 self.writer.add_scalar("Reward/" + key, reward_info[key]/self.num_envs, iterations)
-            self.writer_add_scalar("Reward/total", sum(self.total_rewards)/self.num_envs)
+            self.writer.add_scalar("Reward/total", sum(self.total_rewards)/self.num_envs)
 
             start = time.time()
 
@@ -423,7 +423,6 @@ if __name__ == '__main__':
     cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
 
     # create environment from the configuration file
-    env = deepmimic.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper))
     env = VecEnv(deepmimic.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
     print("env_created")
     env.setTask()

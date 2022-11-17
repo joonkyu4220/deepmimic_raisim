@@ -10,13 +10,16 @@ environment:
   eval_every_n: 200
   max_time: 100.0
 
+  character:
+    file name: "humanoid_dribble"
+    visualize kinematic: False
+
   motion data:
     file name: "walk"
     has wrist: False
     fps: 30
     preprocess: True
-    visualize kinematic: False
-  
+    
   phase usage:
     character: True
     ball: True
@@ -34,17 +37,19 @@ environment:
 
   reward:
     orientation:
-      coeff: 0.5 # 0.65
+      coeff: 0.4
     velocity:
-      coeff: 0.0 # 0.1
+      coeff: 0.05
     end effector:
-      coeff: 0.0 # 0.15
+      coeff: 0.05
     com:
-      coeff: 0.0 # 0.10
+      coeff: 0.0
     contact:
       coeff: 0.4
     ball distance:
-      coeff: 0.1
+      coeff: 0.05
+    energy efficiency:
+      coeff: 0.05
 
 architecture:
   policy_net: [128, 128]

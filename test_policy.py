@@ -20,7 +20,7 @@ if __name__ == '__main__':
     task_path = os.path.dirname(os.path.realpath(__file__))
     home_path = task_path + "/../../../../.."
 
-    model_path = task_path + "/stats/20221107_final"
+    model_path = task_path + "/stats/20221115_walk541"
 
     # config
     cfg = YAML().load(open(model_path + "/cfg.yaml", 'r'))
