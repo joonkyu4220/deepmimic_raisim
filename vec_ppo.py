@@ -357,7 +357,7 @@ class RL(object):
                     reward_info[reward_name] += reward_value
             for key in self.env.reward_info[0].keys():
                 self.writer.add_scalar("Reward/" + key, reward_info[key]/self.num_envs, iterations)
-            self.writer.add_scalar("Reward/total", sum(self.total_rewards)/self.num_envs)
+            self.writer.add_scalar("Reward/total", sum(self.total_rewards)/self.num_envs, iterations)
 
             start = time.time()
 
