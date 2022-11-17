@@ -45,8 +45,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     velScale_ = cfg["error sensitivity"]["velocity"].template As<float>();
     eeScale_ = cfg["error sensitivity"]["end effector"].template As<float>();
     comScale_ = cfg["error sensitivity"]["com"].template As<float>();
-
-    energyScale_ = cfg["error sensitivity"]["energy"].template As<float>();
+    energyScale_ = cfg["error sensitivity"]["energy efficiency"].template As<float>();
 
     dribble_ = cfg["task"]["dribble"].template As<bool>();
     useBallState_ = cfg["task"]["ball state"].template As<bool>();

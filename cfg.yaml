@@ -34,6 +34,8 @@ environment:
     velocity: 0.1
     end effector: 40
     com: 10
+    energy efficiency: 0.01
+
 
   reward:
     orientation:
