@@ -248,10 +248,6 @@ class RL(object):
             self.storage.push(states[i], actions[i], next_states[i], rewards[i], q_values[i], log_probs[i], self.num_envs)
         self.total_rewards = self.env.total_rewards.cpu().numpy().tolist()
         print("processing time", time.time() - start)
-
-        
-                
-        
     
     def update_critic(self, batch_size, num_epoch):
         self.gpu_model.train()
@@ -271,7 +267,6 @@ class RL(object):
             optimizer.zero_grad()
             loss_value.backward()
             optimizer.step()
-           
  
     def update_actor(self, batch_size, num_epoch):
         self.gpu_model.train()
@@ -362,7 +357,7 @@ class RL(object):
                     reward_info[reward_name] += reward_value
             for key in self.env.reward_info[0].keys():
                 self.writer.add_scalar("Reward/" + key, reward_info[key]/self.num_envs, iterations)
-
+            self.writer_add_scalar("Reward/total", sum(self.total_rewards)/self.num_envs)
 
             start = time.time()
 
@@ -378,8 +373,8 @@ class RL(object):
             print("update policy time", time.time()-start)
             print("iteration time", iterations, time.time()-iteration_start)
     
-            if (iterations+0) % 1000 == 999:
-                self.save_model(self.model_name+"iter%d.pt"%(iterations))
+            if (iterations % 1000) == 999:
+                self.save_model(self.model_name+"iter%d.pt"%(iterations+1))
                 #    plt.savefig(self.model_name+"test.png")
     
         self.save_reward_stats("reward_stats.npy")
@@ -428,6 +423,7 @@ if __name__ == '__main__':
     cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
 
     # create environment from the configuration file
+    env = deepmimic.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper))
     env = VecEnv(deepmimic.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
     print("env_created")
     env.setTask()
@@ -435,7 +431,7 @@ if __name__ == '__main__':
     
     ppo.base_dim = ppo.num_inputs
     
-    ppo.model_name = task_path + "/stats/20221115_walk541/"
+    ppo.model_name = task_path + "/stats/20221117_test/"
 
     ppo.writer = SummaryWriter(log_dir=ppo.model_name + "tensorboard")
     
