@@ -29,7 +29,8 @@ class ENVIRONMENT : public RaisimGymEnv {
   void setup(const Yaml::Node& cfg){
     // EXPERIMENT SETTINGS
     charFileName_ = cfg["character"]["file name"].template As<std::string>();
-    visKin_ =cfg["character"]["visualize kinematic"].template As<bool>();
+    visKin_ = cfg["character"]["visualize kinematic"].template As<bool>();
+    restitution_ = cfg["character"]["restitution"].template As<float>();
 
     motionFileName_ = cfg["motion data"]["file name"].template As<std::string>();
     dataHasWrist_ = cfg["motion data"]["has wrist"].template As<bool>();
@@ -60,7 +61,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     }
     world_->addGround(0, "steel");
     world_->setERP(1.0);
-    world_->setMaterialPairProp("default",  "ball", 1.0, 0.8, 0.0001);
+    world_->setMaterialPairProp("default",  "ball", 1.0, restitution_, 0.0001);
     world_->setMaterialPairProp("default", "steel", 5.0, 0.0, 0.0001);
     world_->setMaterialPairProp("ball", "steel", 5.0, 0.85, 0.0001);
   }
@@ -813,6 +814,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     bool visualizable_ = false;
     raisim::ArticulatedSystem *simChar_, *kinChar_;
     raisim::ArticulatedSystem *ball_;
+
+    float restitution_;
 
     int nJoints_ = 14;
     

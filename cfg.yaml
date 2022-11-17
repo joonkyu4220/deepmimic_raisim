@@ -13,6 +13,7 @@ environment:
   character:
     file name: "humanoid_dribble"
     visualize kinematic: False
+    restitution: 0.3
 
   motion data:
     file name: "walk"
@@ -35,7 +36,6 @@ environment:
     end effector: 40
     com: 10
     energy efficiency: 0.01
-
 
   reward:
     orientation:
