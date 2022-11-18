@@ -33,7 +33,7 @@ if __name__ == '__main__':
    # print(task_path)
    # print(home_path)
 
-   model_path = task_path + "/stats/20221107_final"
+   model_path = task_path + "/stats/20221116"
 
    # config
    cfg = YAML().load(open(model_path + "/cfg.yaml", 'r'))
@@ -47,7 +47,7 @@ if __name__ == '__main__':
    num_outputs = env.action_space.shape[0]
    # model = ActorCriticNetMann(num_inputs, num_outputs, [128, 128])
    model = ActorCriticNet(num_inputs, num_outputs, [128, 128])
-   model.load_state_dict(torch.load(model_path + "/iter49999.pt"))
+   model.load_state_dict(torch.load(model_path + "/iter29999.pt"))
    model.cuda()
 
    num_frames = 3000

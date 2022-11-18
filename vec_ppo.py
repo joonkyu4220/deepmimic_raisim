@@ -435,7 +435,7 @@ if __name__ == '__main__':
     
     ppo.base_dim = ppo.num_inputs
     
-    ppo.model_name = task_path + "/stats/20221115_walk541/"
+    ppo.model_name = task_path + "/stats/20221116/"
 
     ppo.writer = SummaryWriter(log_dir=ppo.model_name + "tensorboard")
     
