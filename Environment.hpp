@@ -28,10 +28,13 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   void setup(const Yaml::Node& cfg){
     // EXPERIMENT SETTINGS
+    charFileName_ = cfg["character"]["file name"].template As<std::string>();
+    visKin_ = cfg["character"]["visualize kinematic"].template As<bool>();
+    restitution_ = cfg["character"]["restitution"].template As<float>();
+
     motionFileName_ = cfg["motion data"]["file name"].template As<std::string>();
     dataHasWrist_ = cfg["motion data"]["has wrist"].template As<bool>();
     isPreprocess_ = cfg["motion data"]["preprocess"].template As<bool>();
-    visKin_ =cfg["motion data"]["visualize kinematic"].template As<bool>();
 
     control_dt_ = 1.0 / cfg["motion data"]["fps"].template As<float>();
     simulation_dt_ = cfg["simulation_dt"].template As<float>();
@@ -43,6 +46,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     velScale_ = cfg["error sensitivity"]["velocity"].template As<float>();
     eeScale_ = cfg["error sensitivity"]["end effector"].template As<float>();
     comScale_ = cfg["error sensitivity"]["com"].template As<float>();
+    energyScale_ = cfg["error sensitivity"]["energy efficiency"].template As<float>();
 
     dribble_ = cfg["task"]["dribble"].template As<bool>();
     useBallState_ = cfg["task"]["ball state"].template As<bool>();
@@ -57,7 +61,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     }
     world_->addGround(0, "steel");
     world_->setERP(1.0);
-    world_->setMaterialPairProp("default",  "ball", 1.0, 0.8, 0.0001);
+    world_->setMaterialPairProp("default",  "ball", 1.0, restitution_, 0.0001);
     world_->setMaterialPairProp("default", "steel", 5.0, 0.0, 0.0001);
     world_->setMaterialPairProp("ball", "steel", 5.0, 0.85, 0.0001);
   }
@@ -81,6 +85,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     gvDim_ = simChar_->getDOF(); // 40
     controlDim_ = gvDim_ - 6;
     gv_.setZero(gvDim_); gvInit_.setZero(gvDim_); gvRef_.setZero(gvDim_);
+
+    prevGV_.setZero(gvDim_);
     
     com_.setZero(comDim_); comRef_.setZero(comDim_);
     ee_.setZero(eeDim_); eeRef_.setZero(eeDim_);
@@ -121,7 +127,7 @@ class ENVIRONMENT : public RaisimGymEnv {
   }
 
   void setBall(){
-    ball_ = world_->addArticulatedSystem(resourceDir_ + "/ball3D.urdf");
+    ball_ = world_->addArticulatedSystem(resourceDir_ + "/basketball.urdf");
     ball_->setName("ball");
     ball_->setIntegrationScheme(raisim::ArticulatedSystem::IntegrationScheme::RUNGE_KUTTA_4);
 
@@ -423,7 +429,7 @@ class ENVIRONMENT : public RaisimGymEnv {
       // ballGCInit_[0] = rightHandPos[0] + 0.1;
       ballGCInit_[0] = rightHandPos[0] + 0.08850; // half the hand size
       ballGCInit_[1] = rightHandPos[1];
-      ballGCInit_[2] = rightHandPos[2] - 0.151; // ball 0.11, hand 0.03
+      ballGCInit_[2] = rightHandPos[2] - 0.171; // ball 0.14, hand 0.03
       ballGCInit_[3] = 1;
 
       ballGVInit_[0] = gvInit_[0];
@@ -535,6 +541,8 @@ class ENVIRONMENT : public RaisimGymEnv {
   }
 
   float step(const Eigen::Ref<EigenVec>& action) final {
+    prevGV_ = gv_;
+
     gcRef_ = dataGC_.row(index_);
     gvRef_ = dataGV_.row(index_);
     eeRef_ = dataEE_.row(index_);
@@ -682,6 +690,7 @@ class ENVIRONMENT : public RaisimGymEnv {
   }
 
   void computeReward() {
+    
     // imitation reward
     double ornErr = 0, ornReward = 0;
     double velErr = 0, velReward = 0;
@@ -754,6 +763,10 @@ class ENVIRONMENT : public RaisimGymEnv {
       distReward += exp(-ballDist_);
     }
     rewards_.record("ball distance", distReward);
+
+    double energyReward = 0;
+    energyReward += exp(- energyScale_ * (prevGV_ - gv_).squaredNorm());
+    rewards_.record("energy efficiency", energyReward);
   }
   
   void observe(Eigen::Ref<EigenVec> ob) final {
@@ -794,13 +807,15 @@ class ENVIRONMENT : public RaisimGymEnv {
 
   private:
     bool dribble_, useBallState_, mask_;
-    std::string motionFileName_;
+    std::string charFileName_, motionFileName_;
     bool dataHasWrist_, isPreprocess_, visKin_, useCharPhase_, useBallPhase_;
-    float ornScale_, velScale_, eeScale_, comScale_;
+    float ornScale_, velScale_, eeScale_, comScale_, energyScale_;
 
     bool visualizable_ = false;
     raisim::ArticulatedSystem *simChar_, *kinChar_;
     raisim::ArticulatedSystem *ball_;
+
+    float restitution_;
 
     int nJoints_ = 14;
     
@@ -834,6 +849,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     int posDim_ = 3 * nJoints_, comDim_ = 3, eeDim_ = 12;
 
     Eigen::VectorXd gc_, gv_, gcInit_, gvInit_, gcRef_, gvRef_;
+    Eigen::VectorXd prevGV_;
     Eigen::MatrixXd dataGC_, dataGV_, dataEE_, dataCom_;
     Eigen::VectorXd com_, comRef_, ee_, eeRef_;
     
