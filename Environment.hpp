@@ -91,6 +91,22 @@ class ENVIRONMENT : public RaisimGymEnv {
     com_.setZero(comDim_); comRef_.setZero(comDim_);
     ee_.setZero(eeDim_); eeRef_.setZero(eeDim_);
 
+    // std::vector<Vec<2>> jointLimits = simChar_->getJointLimits();
+    // Vec<2> sphericalJointLimit = {-1.9, 1.9};
+    // int limitIdx = 6;
+    // for (int jointIdx=0; jointIdx<nJoints_; jointIdx++){
+    //   if (vDim_[jointIdx] == 3){
+    //     jointLimits[limitIdx][0] = sphericalJointLimit[0];
+    //     jointLimits[limitIdx][1] = sphericalJointLimit[1];
+    //   }
+    //   else{
+    //   }
+    //   limitIdx += vDim_[jointIdx];
+    // }
+    // for (int idx=0; idx<jointLimits.size(); idx++){
+    //   std::cout << jointLimits[idx] << std::endl;
+    // }
+    // simChar_->setJointLimits(jointLimits);
   }
 
   void setController(){
@@ -404,9 +420,13 @@ class ENVIRONMENT : public RaisimGymEnv {
     // TODO: Noisier initialization scheme as the learning progresses
     if (dribble_){
       // gcInit_[cStartIdx_[2]] = 1; gcInit_[cStartIdx_[2] + 1] = 0; gcInit_[cStartIdx_[2] + 2] = 0; gcInit_[cStartIdx_[2] + 3] = 0; 
-      gcInit_[cStart_[2]] = 0.866; gcInit_[cStart_[2] + 1] = -0.5; gcInit_[cStart_[2] + 2] = 0; gcInit_[cStart_[2] + 3] = 0;
+      // gcInit_[cStart_[2]] = 0.866; gcInit_[cStart_[2] + 1] = -0.5; gcInit_[cStart_[2] + 2] = 0; gcInit_[cStart_[2] + 3] = 0;
+      // gcInit_[cStart_[3]] = 1.57;
+      // gcInit_[cStart_[4]] = 0.966; gcInit_[cStart_[4] + 1] = 0; gcInit_[cStart_[4] + 2] = 0.259; gcInit_[cStart_[4] + 3] = 0;
+
+      gcInit_[cStart_[2]] = 0.707; gcInit_[cStart_[2] + 1] = -0.707; gcInit_[cStart_[2] + 2] = 0; gcInit_[cStart_[2] + 3] = 0;
       gcInit_[cStart_[3]] = 1.57;
-      gcInit_[cStart_[4]] = 0.966; gcInit_[cStart_[4] + 1] = 0; gcInit_[cStart_[4] + 2] = 0.259; gcInit_[cStart_[4] + 3] = 0;
+      gcInit_[cStart_[4]] = 0.707; gcInit_[cStart_[4] + 1] = 0; gcInit_[cStart_[4] + 2] = 0.707; gcInit_[cStart_[4] + 3] = 0;
 
       gvInit_[vStart_[2]] = 0; gvInit_[vStart_[2] + 1] = 0; gvInit_[vStart_[2] + 2] = 0;
       gvInit_[vStart_[3]] = 0;
@@ -425,15 +445,15 @@ class ENVIRONMENT : public RaisimGymEnv {
     if (dribble_){
       Vec<3> rightHandPos;
       size_t rightHandIdx = simChar_->getFrameIdxByName("right_wrist"); // 9
-      simChar_->getFramePosition(rightHandIdx, rightHandPos);
+      simChar_->getPosition(rWristIdx_ + 1, rHandCenter_, rightHandPos);
       // ballGCInit_[0] = rightHandPos[0] + 0.1;
-      ballGCInit_[0] = rightHandPos[0] + 0.08850; // half the hand size
+      ballGCInit_[0] = rightHandPos[0]; // half the hand size
       ballGCInit_[1] = rightHandPos[1];
       ballGCInit_[2] = rightHandPos[2] - 0.171; // ball 0.14, hand 0.03
       ballGCInit_[3] = 1;
 
       ballGVInit_[0] = gvInit_[0];
-      ballGVInit_[1] = gvInit_[1];
+      // ballGVInit_[1] = gvInit_[1];
       ballGVInit_[2] = 0.05;
     }
     else{
@@ -501,7 +521,7 @@ class ENVIRONMENT : public RaisimGymEnv {
         obDouble_.segment(obIdx, 3) = jointVel_B.e();
         obIdx += 3;
         Vec<3> rHandPos_W;
-        simChar_->getPosition(rWristIdx_ + 1, rHandCenter, rHandPos_W);
+        simChar_->getPosition(rWristIdx_ + 1, rHandCenter_, rHandPos_W);
         ballDist_ = (rHandPos_W[0] - ballGC_[0]) * (rHandPos_W[0] - ballGC_[0]) + (rHandPos_W[1] - ballGC_[1]) * (rHandPos_W[1] - ballGC_[1]);
         
       }
@@ -562,6 +582,9 @@ class ENVIRONMENT : public RaisimGymEnv {
       controlIdx = actionIdx + 7;
       pTarget_.segment(controlIdx, cDim_[jointIdx]) << pTarget_.segment(controlIdx, cDim_[jointIdx]) + action.cast<double>().segment(actionIdx, cDim_[jointIdx]);
       if (cDim_[jointIdx] == 4){
+        if (jointIdx == rWristIdx_){
+          pTarget_[controlIdx + 3] = pTarget_[controlIdx + 1] * pTarget_[controlIdx + 2] / pTarget_[controlIdx];
+        }
         pTarget_.segment(controlIdx, cDim_[jointIdx]) << pTarget_.segment(controlIdx, cDim_[jointIdx]).normalized();
       }
       actionIdx += cDim_[jointIdx];
@@ -842,7 +865,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     int isRightArm_[14] = {0, 0,  1, 1, 1,  0, 0, 0,  0, 0, 0,  0, 0, 0};
 
 
-    Vec<3> rHandCenter = {0, -0.08850, 0};
+    Vec<3> rHandCenter_ = {0, -0.08850, 0};
 
 
     int gcDim_, gvDim_, controlDim_, ballGCDim_, ballGVDim_;
