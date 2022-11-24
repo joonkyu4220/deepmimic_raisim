@@ -13,7 +13,7 @@ environment:
   character:
     file name: "humanoid_dribble"
     visualize kinematic: False
-    restitution: 0.5
+    restitution: 0
 
   motion data:
     file name: "walk"
