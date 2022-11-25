@@ -2,6 +2,8 @@ seed: 1
 record_video: yes # yes
 
 environment:
+  experiment name: "20221125_walkdribble_jointlimits"
+  
   render: True
   num_envs: 800
   num_threads: 8
@@ -13,7 +15,8 @@ environment:
   character:
     file name: "humanoid_dribble"
     visualize kinematic: False
-    restitution: 0.3
+    restitution: 0.8
+    arm spread: 1.047198 #0.785398
 
   motion data:
     file name: "walk"
@@ -29,6 +32,7 @@ environment:
     dribble: True
     ball state: True
     mask: True
+    desired root-ball distance: 0.3
 
   error sensitivity:
     orientation: 2
@@ -39,7 +43,7 @@ environment:
 
   reward:
     orientation:
-      coeff: 0.4
+      coeff: 0.65
     velocity:
       coeff: 0.05
     end effector:
@@ -47,11 +51,29 @@ environment:
     com:
       coeff: 0.0
     contact:
-      coeff: 0.4
-    ball distance:
+      coeff: 0.1
+    hand ball distance:
+      coeff: 0.05
+    root ball distance:
       coeff: 0.05
     energy efficiency:
       coeff: 0.05
+  
+  # reward:
+  #   orientation:
+  #     coeff: 0.8
+  #   velocity:
+  #     coeff: 0.1
+  #   end effector:
+  #     coeff: 0.1
+  #   com:
+  #     coeff: 0.0
+  #   contact:
+  #     coeff: 0.0
+  #   ball distance:
+  #     coeff: 0.0
+  #   energy efficiency:
+  #     coeff: 0.0
 
 architecture:
   policy_net: [128, 128]
