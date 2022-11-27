@@ -441,10 +441,10 @@ class ENVIRONMENT : public RaisimGymEnv {
       Mat<3, 3> rShoulderOrn;
       simChar_->getFrameOrientation("right_shoulder", rShoulderOrn);
       float zrot = std::atan2(-rShoulderOrn[2], rShoulderOrn[5]);
-      float cz = std::cos(zrot/2), sz = std::sin(zrot/2), cx = std::cos(armSpread_/2), sx = std::sin(armSpread_/2);
+      float cz = std::cos(zrot/2), sz = std::sin(zrot/2), cx = std::cos(armSpread_/2), sx = std::sin(armSpread_/2), cx2=std::cos((M_PI/2-armSpread_)/2), sx2=std::sin((M_PI/2-armSpread_)/2);
       gcInit_[cStart_[rShoulderIdx_]] = cz * cx; gcInit_[cStart_[rShoulderIdx_] + 1] = - cz * sx; gcInit_[cStart_[rShoulderIdx_] + 2] = - sz * sx; gcInit_[cStart_[rShoulderIdx_] + 3] = sz * cx;
       gcInit_[cStart_[rElbowIdx_]] = 1.57;
-      gcInit_[cStart_[rWristIdx_]] = cx; gcInit_[cStart_[rWristIdx_] + 1] = 0; gcInit_[cStart_[rWristIdx_] + 2] = sx; gcInit_[cStart_[rWristIdx_] + 3] = 0;
+      gcInit_[cStart_[rWristIdx_]] = cx2; gcInit_[cStart_[rWristIdx_] + 1] = 0; gcInit_[cStart_[rWristIdx_] + 2] = sx2; gcInit_[cStart_[rWristIdx_] + 3] = 0;
 
       gvInit_[vStart_[rShoulderIdx_]] = 0; gvInit_[vStart_[rShoulderIdx_] + 1] = 0; gvInit_[vStart_[rShoulderIdx_] + 2] = 0;
       gvInit_[vStart_[rElbowIdx_]] = 0;
@@ -465,13 +465,13 @@ class ENVIRONMENT : public RaisimGymEnv {
       // ballGCInit_[0] = rightHandPos[0] + 0.1;
       ballGCInit_[0] = rightHandPos_[0]; // half the hand size
       ballGCInit_[1] = rightHandPos_[1];
-      ballGCInit_[2] = rightHandPos_[2] - 0.16; // ball 0.14, hand 0.015
+      ballGCInit_[2] = rightHandPos_[2] - 0.4; // ball 0.14, hand 0.015
       ballGCInit_[3] = 1;
 
       ballGVInit_[0] = gvInit_[0];
       // ballGVInit_[1] = gvInit_[1];
       // ballGVInit_[2] = 0.05;
-      ballGVInit_[2] = 0.1;
+      ballGVInit_[2] = 0.5;
     }
     else{
       ballGCInit_[0] = 0; ballGCInit_[1] = 100; ballGCInit_[2] = 5; ballGCInit_[3] = 1;

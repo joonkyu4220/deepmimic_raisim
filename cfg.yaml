@@ -2,7 +2,7 @@ seed: 1
 record_video: yes # yes
 
 environment:
-  experiment name: "20221125_walkdribble_jointlimits"
+  experiment name: "20221126_rundribble"
   
   render: True
   num_envs: 800
@@ -19,7 +19,7 @@ environment:
     arm spread: 1.047198 #0.785398
 
   motion data:
-    file name: "walk"
+    file name: "run"
     has wrist: False
     fps: 30
     preprocess: True
