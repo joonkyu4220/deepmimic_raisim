@@ -110,6 +110,14 @@ class ENVIRONMENT : public RaisimGymEnv {
     //   std::cout << jointLimits[idx] << std::endl;
     // }
     // simChar_->setJointLimits(jointLimits);
+    // std::cout << "===========================================================" << std::endl;
+    // // for (int idx=0; idx <simChar_->getJointLimits().size(); idx++)
+    // //   std::cout << simChar_->getJointLimits()[idx] << std::endl;
+    // std::cout << simChar_->getJointLimits()[vStart_[rElbowIdx_]] << std::endl;
+    // std::cout << simChar_->getJointLimits()[vStart_[lElbowIdx_]] << std::endl;
+    // std::cout << simChar_->getJointLimits()[vStart_[rKneeIdx_]] << std::endl;
+    // std::cout << simChar_->getJointLimits()[vStart_[lKneeIdx_]] << std::endl;
+    // std::cout << "===========================================================" << std::endl;
   }
 
   void setController(){
@@ -602,7 +610,7 @@ class ENVIRONMENT : public RaisimGymEnv {
         //   pTarget_[controlIdx + 3] = - pTarget_[controlIdx + 1] * pTarget_[controlIdx + 2] / (pTarget_[controlIdx] + 1e-10);
         // }
         if (dribble_ && rotationType_[jointIdx]){
-          applyJointLimit(controlIdx, rotationType_[jointIdx]);
+          applyJointLimit(controlIdx, jointIdx);
         }
         pTarget_.segment(controlIdx, cDim_[jointIdx]) << pTarget_.segment(controlIdx, cDim_[jointIdx]).normalized();
       }
@@ -650,8 +658,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     return current_reward;
   }
 
-  void applyJointLimit(int controlIdx, int rotationType){
-    
+  void applyJointLimit(int controlIdx, int jointIdx){
+    int rotationType = rotationType_[jointIdx];
     if (rotationType == 1){
       pTarget_[controlIdx + 1] = (pTarget_[controlIdx + 2] * pTarget_[controlIdx + 3]) / (pTarget_[controlIdx] + 1e-10);
     }
@@ -666,6 +674,11 @@ class ENVIRONMENT : public RaisimGymEnv {
     }
     if (rotationType == 3){
       pTarget_[controlIdx + 3] = - (pTarget_[controlIdx + 1] * pTarget_[controlIdx + 2]) / (pTarget_[controlIdx] + 1e-10);
+    }
+    if (rotationType == 10){
+      double lowerBound = simChar_->getJointLimits()[vStart_[jointIdx]][0];
+      double upperBound = simChar_->getJointLimits()[vStart_[jointIdx]][1];
+      pTarget_[controlIdx] = std::min(std::max(lowerBound, pTarget_[controlIdx]), upperBound);
     }
   }
 
@@ -923,7 +936,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     int isEE_[14] = {0, 0,  0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1};
     int isMask_[14] = {0, 0,  1, 1, 1,  0, 0, 0,  0, 0, 0,  0, 0, 0};
 
-    int rotationType_[14] = {0, 0, 2, 0, 3, 2, 0, 3, 2, 0, 0, 2, 0, 0};
+    int rotationType_[14] = {0, 0, 2, 10, 3, 2, 10, 3, 2, 10, 0, 2, 10, 0};
 
     Vec<3> rightHandPos_;
     Vec<3> rHandCenter_ = {0, -0.08850, 0};
