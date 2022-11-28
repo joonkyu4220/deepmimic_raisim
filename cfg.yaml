@@ -2,7 +2,7 @@ seed: 1
 record_video: yes # yes
 
 environment:
-  experiment name: "20221126_rundribble"
+  experiment name: "20221128_run_ballposangle"
   
   render: True
   num_envs: 800
@@ -56,8 +56,10 @@ environment:
       coeff: 0.05
     root ball distance:
       coeff: 0.05
+    root ball angle:
+      coeff: 0.25
     energy efficiency:
-      coeff: 0.05
+      coeff: 0.25
   
   # reward:
   #   orientation:

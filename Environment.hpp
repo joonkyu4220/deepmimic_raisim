@@ -843,15 +843,20 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     double handDistReward = 0;
     double rootDistReward = 0;
+    double ballAngleReward = 0;
     if (dribble_){
       handDistReward += exp(-handBallDist_);
       rootBallDist_ = std::sqrt(rootBallDist_);
       rootBallDist_ = std::max(desiredRootBallDist_, rootBallDist_) - desiredRootBallDist_;
 
       rootDistReward += exp(-rootBallDist_);
+
+      double rootBallAng = std::max(std::atan2(obDouble_[163], obDouble_[162]), 0.0);
+      ballAngleReward = exp(-(rootBallAng - M_PI/4)*(rootBallAng - M_PI/4));
     }
     rewards_.record("hand ball distance", handDistReward);
     rewards_.record("root ball distance", rootDistReward);
+    rewards_.record("root ball angle", ballAngleReward);
 
     double energyReward = 0;
     energyReward += exp(- energyScale_ * (prevGV_ - gv_).squaredNorm());
