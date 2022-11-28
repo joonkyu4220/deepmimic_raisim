@@ -20,7 +20,7 @@ if __name__ == '__main__':
     task_path = os.path.dirname(os.path.realpath(__file__))
     home_path = task_path + "/../../../../.."
 
-    model_path = task_path + "/stats/20221122_restitution0_energy0.01"
+    model_path = task_path + "/stats/20221126_rundribble"
 
     # config
     cfg = YAML().load(open(model_path + "/cfg.yaml", 'r'))
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     num_outputs = env.action_space.shape[0]
     # model = ActorCriticNetMann(num_inputs, num_outputs, [128, 128])
     model = ActorCriticNet(num_inputs, num_outputs, [128, 128])
-    model.load_state_dict(torch.load(model_path + "/iter20000.pt"))
+    model.load_state_dict(torch.load(model_path + "/iter21000.pt"))
     model.cuda()
 
     env.setTask()
@@ -51,4 +51,4 @@ if __name__ == '__main__':
         with torch.no_grad():
             act = model.sample_best_actions(obs)
         obs, rew, done, _ = env.step(act)
-        time.sleep(control_dt)
+        # time.sleep(0.01)
