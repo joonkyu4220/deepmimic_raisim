@@ -49,6 +49,10 @@ class ENVIRONMENT : public RaisimGymEnv {
     eeScale_ = cfg["error sensitivity"]["end effector"].template As<float>();
     comScale_ = cfg["error sensitivity"]["com"].template As<float>();
     energyScale_ = cfg["error sensitivity"]["energy efficiency"].template As<float>();
+    handBallDistScale_ = cfg["error sensitivity"]["hand ball distance"].template As<float>();
+    rootBallDistScale_ = cfg["error sensitivity"]["root ball distance"].template As<float>();
+    rootBallVelScale_ = cfg["error sensitivity"]["root ball velocity"].template As<float>();
+    rWristOrnScale_ = cfg["error sensitivity"]["right wrist orientation"].template As<float>();
 
     dribble_ = cfg["task"]["dribble"].template As<bool>();
     useBallState_ = cfg["task"]["ball state"].template As<bool>();
@@ -570,6 +574,11 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     // for com reward. not recorded to observation
     com_ = (simChar_->getCOM()).e();
+
+    Mat<3, 3> rWristOrn;
+    simChar_->getFrameOrientation("right_wrist", rWristOrn);
+    raisim::matmul(rootRotInv, rWristOrn, rWristOrn_);
+
   }
 
   void getRootTransform(Mat<3,3>& rot, Vec<3>& pos) {
@@ -844,18 +853,28 @@ class ENVIRONMENT : public RaisimGymEnv {
     double handDistReward = 0;
     double rootDistReward = 0;
     if (dribble_){
-      handDistReward += exp(-handBallDist_);
+      handDistReward += exp(-handBallDistScale_ * handBallDist_);
       rootBallDist_ = std::sqrt(rootBallDist_);
       rootBallDist_ = std::max(desiredRootBallDist_, rootBallDist_) - desiredRootBallDist_;
 
-      rootDistReward += exp(-rootBallDist_);
+      rootDistReward += exp(-rootBallDistScale_ * rootBallDist_);
     }
     rewards_.record("hand ball distance", handDistReward);
     rewards_.record("root ball distance", rootDistReward);
 
+    double rootVelReward = 0;
+    rootVelReward += exp(-rootBallVelScale_ * (gv_.head(2) - ballGV_.head(2)).squaredNorm());
+
+    rewards_.record("root ball velocity", rootVelReward);
+
     double energyReward = 0;
     energyReward += exp(- energyScale_ * (prevGV_ - gv_).squaredNorm());
     rewards_.record("energy efficiency", energyReward);
+
+
+    double rWristOrnReward = 0;
+    rWristOrnReward = exp(- rWristOrnScale_ * (2 - rWristOrn_[1] + rWristOrn_[3]));
+    rewards_.record("right wrist orientation", rWristOrnReward);
   }
   
   void observe(Eigen::Ref<EigenVec> ob) final {
@@ -887,9 +906,9 @@ class ENVIRONMENT : public RaisimGymEnv {
       }
 
       // ball too far
-      if (handBallDist_ > ballDistThreshold_){
-        return true;
-      }
+      // if (handBallDist_ > ballDistThreshold_){
+      //   return true;
+      // }
     }
     return false;
   }
@@ -898,7 +917,9 @@ class ENVIRONMENT : public RaisimGymEnv {
     bool dribble_, useBallState_, mask_;
     std::string charFileName_, motionFileName_;
     bool dataHasWrist_, isPreprocess_, visKin_, useCharPhase_, useBallPhase_;
-    float ornScale_, velScale_, eeScale_, comScale_, energyScale_;
+    float ornScale_, velScale_, eeScale_, comScale_, energyScale_, handBallDistScale_, rootBallDistScale_, rootBallVelScale_;
+    
+    float rWristOrnScale_;
 
     double desiredRootBallDist_ = 0.3;
 
@@ -979,6 +1000,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     bool fromGround_ = false, fromHand_ = false, isGround_ = false, isHand_ = false, groundHand_ = false;
     
     int nLoops_;
+
+    Mat<3, 3> rWristOrn_;
 };
 
 }
