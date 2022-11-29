@@ -18,7 +18,9 @@ from operator import add, sub
  
 import pickle
  
- 
+from retrain import load_params, reload_tb
+from tensorboard.summary.writer.event_file_writer import EventFileWriter
+
 class PPOStorage:
     def __init__(self, num_inputs, num_outputs, max_size=64000):
         self.states = torch.zeros(max_size, num_inputs).to(device)
@@ -103,6 +105,9 @@ class RL(object):
 
         self.writer = None
  
+        self.actor_optimizer = None
+        self.critic_optimizer = None
+
     def normalize_data(self, num_iter=1000, file='shared_obs_stats.pkl'):
         state = self.env.reset()
         state = Variable(torch.Tensor(state).unsqueeze(0))
@@ -247,11 +252,11 @@ class RL(object):
         for i in range(num_samples):
             self.storage.push(states[i], actions[i], next_states[i], rewards[i], q_values[i], log_probs[i], self.num_envs)
         self.total_rewards = self.env.total_rewards.cpu().numpy().tolist()
-        print("processing time", time.time() - start)
+        print("\nprocessing time", time.time() - start)
     
     def update_critic(self, batch_size, num_epoch):
         self.gpu_model.train()
-        optimizer = optim.Adam(self.gpu_model.parameters(), lr=10*self.lr)
+        self.critic_optimizer = optim.Adam(self.gpu_model.parameters(), lr=10*self.lr)
 
         storage = self.storage
         gpu_model = self.gpu_model
@@ -264,14 +269,14 @@ class RL(object):
             loss_value = (v_pred - batch_q_values)**2
             loss_value = 0.5 * loss_value.mean()
 
-            optimizer.zero_grad()
+            self.critic_optimizer.zero_grad()
             loss_value.backward()
-            optimizer.step()
+            self.critic_optimizer.step()
  
     def update_actor(self, batch_size, num_epoch):
         self.gpu_model.train()
 
-        optimizer = optim.Adam(self.gpu_model.parameters(), lr=self.lr)
+        self.actor_optimizer = optim.Adam(self.gpu_model.parameters(), lr=self.lr)
 
         storage = self.storage
         gpu_model = self.gpu_model
@@ -298,9 +303,9 @@ class RL(object):
 
             total_loss = loss_clip + 0.001 * (mean_actions**2).mean()
             
-            optimizer.zero_grad()
+            self.actor_optimizer.zero_grad()
             total_loss.backward()
-            optimizer.step()
+            self.actor_optimizer.step()
 
         if self.lr > 1e-4:
             self.lr *= 0.99
@@ -310,6 +315,38 @@ class RL(object):
     def save_model(self, filename):
         torch.save(self.gpu_model.state_dict(), filename)
     
+    def save_params(self, filename, iterations = 0 ):
+        torch.save({'model_architecture_state_dict' : self.gpu_model.state_dict(),
+                    'actor_optimizer_state_dict' : self.actor_optimizer.state_dict(),
+                    'critic_optimizer_state_dict' : self.critic_optimizer.state_dict(),
+                }, filename)
+        
+        self.writer.flush()
+        # save event file         
+        self.copy_save_eventfile(iterations + 1)
+
+        print("\n=================\nsaving parameters of model and optimizers and event file\n=================\n")
+
+    def copy_save_eventfile(self, iterations):
+        checkpoint = ppo.model_name + "checkpoints/"
+        tb_dir = ppo.model_name + "tensorboard/"
+        # check event files
+        file_list = os.listdir(tb_dir)
+        event_file_list = [file for file in file_list if file.startswith("events.out.tfevents")]
+
+        # save lfile with the latest event file
+        time = [int(file.split('.', 5)[3]) for file in event_file_list]
+        lfile = [file for file in event_file_list if str(max(time)) in file][0]
+
+        # save that file into other folder
+        new_dir = "iter" + str(iterations)
+        if  not(new_dir in os.listdir(checkpoint)):
+            os.mkdir(checkpoint + new_dir)
+        
+        shutil.copy2(tb_dir + lfile, checkpoint + new_dir + "/" + lfile)
+
+        return
+
     def save_shared_obs_stas(self, filename):
         with open(filename, 'wb') as output:
             pickle.dump(self.shared_obs_stats, output, pickle.HIGHEST_PROTOCOL)
@@ -319,7 +356,7 @@ class RL(object):
         with open(filename, 'wb') as output:
             pickle.dump(statistics, output, pickle.HIGHEST_PROTOCOL)
     
-    def collect_samples_multithread(self):
+    def collect_samples_multithread(self, start_iteration = 0):
         import time
         self.num_envs = 800 # 800
         self.start = time.time()
@@ -343,7 +380,8 @@ class RL(object):
         self.model.set_noise(noise)
         self.gpu_model.set_noise(noise)
         self.env.reset()
-        for iterations in range(200000):
+
+        for iterations in range(start_iteration, 200000):
             iteration_start = time.time()
             print(self.model_name)
             while self.storage.counter < max_samples:
@@ -356,8 +394,8 @@ class RL(object):
                 for (reward_name, reward_value) in env_info.items():
                     reward_info[reward_name] += reward_value
             for key in self.env.reward_info[0].keys():
-                self.writer.add_scalar("Reward/" + key, reward_info[key]/self.num_envs, iterations)
-            self.writer.add_scalar("Reward/total", sum(self.total_rewards)/self.num_envs, iterations)
+                self.writer.add_scalar("Reward/" + key,reward_info[key]/self.num_envs, global_step = iterations)
+            self.writer.add_scalar("Reward/total", sum(self.total_rewards)/self.num_envs,  global_step = iterations)
 
             start = time.time()
 
@@ -370,16 +408,20 @@ class RL(object):
             #        self.plot_statistics()
             #        # plt.savefig("test.png")
 
-            print("update policy time", time.time()-start)
-            print("iteration time", iterations, time.time()-iteration_start)
-    
+            print("\nupdate policy time: %f"%(time.time()-start))
+            print("\niteration time {%d}: %f" %(iterations, time.time() - iteration_start), "\n=================")
+      
             if (iterations % 1000) == 999:
-                self.save_model(self.model_name+"iter%d.pt"%(iterations+1))
+                # self.save_model(self.model_name+"iter%d.pt"%(iterations+1))
+                self.save_params(self.model_name + "/iter_"+ str(iterations + 1) + '.pt', iterations)
+                
                 #    plt.savefig(self.model_name+"test.png")
     
         self.save_reward_stats("reward_stats.npy")
-        self.save_model(self.model_name+"final.pt")
-    
+        # self.save_model(self.model_name+"final.pt")
+        self.save_params(self.model_name + "final.pt", iterations)
+        
+        
     def add_env(self, env):
         self.env_list.append(env)
  
@@ -405,6 +447,7 @@ if __name__ == '__main__':
     import torch.utils.data
     from model import ActorCriticNet, ActorCriticNetMann
     from torch.utils.tensorboard import SummaryWriter
+    import shutil
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -419,8 +462,17 @@ if __name__ == '__main__':
     task_path = os.path.dirname(os.path.realpath(__file__))
     home_path = task_path + "/../../../../.."
 
+    # Argument Configuration
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-m', '--mode', help='set mode either train or test', type=str, default='train')
+    parser.add_argument('-w', '--weight', help='pre-trained weight path (env/envs/deepmimic_yr/stats/$(WRITE_PTFILE_NAME))', type=str, default='')
+    args = parser.parse_args()
+    mode = args.mode
+
+
     # config
     cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
+    parser = argparse.ArgumentParser()
 
     # create environment from the configuration file
     env = VecEnv(deepmimic.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
@@ -432,13 +484,26 @@ if __name__ == '__main__':
     
     ppo.model_name = task_path + "/stats/" + cfg["environment"]["experiment name"] + "/"
 
-    ppo.writer = SummaryWriter(log_dir=ppo.model_name + "tensorboard")
+    # #log_dir
+    tb_dir = ppo.model_name + "tensorboard"
+
+    ppo.writer = SummaryWriter(log_dir = tb_dir)
     
+    start_iteration_number = 0
+    weight_path = task_path + "/stats/" + cfg["environment"]["experiment name"] + "/" + args.weight
+
+    if mode == 'retrain':
+        ppo.actor_optimizer = optim.Adam([*ppo.gpu_model.parameters()], lr = ppo.lr)
+        ppo.critic_optimizer = optim.Adam([*ppo.gpu_model.parameters()], lr = 10 * ppo.lr)
+
+        load_params(weight_path, env, ppo)
+        start_iteration_number = reload_tb(tb_dir)
+
     if not(os.path.isdir(ppo.model_name)):
         os.mkdir(ppo.model_name)
-    import shutil
     shutil.copy(task_path + "/cfg.yaml", ppo.model_name + "cfg.yaml")
 
     training_start = time.time()
-    ppo.collect_samples_multithread()
+    # start_iteration_number = 2
+    ppo.collect_samples_multithread(start_iteration_number + 1)
     print("training time", time.time()-training_start)
