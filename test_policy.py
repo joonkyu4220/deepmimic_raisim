@@ -34,7 +34,8 @@ if __name__ == '__main__':
     num_outputs = env.action_space.shape[0]
     # model = ActorCriticNetMann(num_inputs, num_outputs, [128, 128])
     model = ActorCriticNet(num_inputs, num_outputs, [128, 128])
-    model.load_state_dict(torch.load(model_path + "/iter21000.pt"))
+    checkpoint = torch.load(model_path + "/iter.pt")
+    model.load_state_dict(checkpoint["model_architecture_state_dict"])
     model.cuda()
 
     env.setTask()
