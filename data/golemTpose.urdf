@@ -1,0 +1,520 @@
+<?xml version="1.0" ?>
+<robot name = "golem">
+  <material name="default"/>
+  
+  <link name="base">
+    <inertial>
+      <origin rpy = "0 0 0" xyz = "0 0 0" />
+      <mass value = "0.0001" />
+      <inertia ixx = "0.0001" ixy = "0" ixz = "0" iyy = "0.0001" iyz = "0" izz = "0.0001" />
+    </inertial>
+  </link>
+
+  <link name="root">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <geometry>
+        <sphere radius="0.182"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 -0.02 0"/>
+      <geometry>
+        <sphere radius="0.182"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="root" type="fixed">
+    <parent link="base"/>
+    <child link="root"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+
+  <link name="back">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 -0.16198"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.16198"/>
+      <geometry>
+        <sphere radius="0.195"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 -0.16198"/>
+      <geometry>
+        <sphere radius="0.195"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="back" type="spherical">
+    <parent link="root"/>
+    <child link="back"/>
+    <origin rpy="1.570796 -0.431521 1.5707963" xyz="0.059577 0.213578 0"/>
+  </joint>
+
+  <link name="chest">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.1171872 0.1559519 0"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.1171872 0.1559519 0"/>
+      <geometry>
+        <sphere radius="0.12"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0.1171872 0.1559519 0"/>
+      <geometry>
+        <sphere radius="0.12"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="chest" type="spherical">
+    <parent link="back"/>
+    <child link="chest"/>
+    <origin rpy="0 1.570796 -1.61621" xyz="0 0 -0.32397"/>
+  </joint>
+
+  <link name="neck">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0585936 0.0779759 0"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.0585936 0.0779759 0"/>
+      <geometry>
+        <!-- <sphere radius="0.15"/> -->
+        <box size="0.25 0.25 0.25"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0.0585936 0.0779759 0"/>
+      <geometry>
+        <!-- <sphere radius="0.15"/> -->
+        <box size="0.25 0.25 0.25"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="neck" type="spherical">
+    <parent link="chest"/>
+    <child link="neck"/>
+    <origin rpy="0 0 -1.070986" xyz="0.2342743 0.3119037 0"/>
+  </joint>
+
+  <link name="right_collar">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0.1151613"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.1151613"/>
+      <geometry>
+        <sphere radius="0.12"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0.1151613"/>
+      <geometry>
+        <sphere radius="0.12"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="right_collar" type="spherical">
+    <parent link="chest"/>
+    <child link="right_collar"/>
+    <origin rpy="0 0 -2.664646" xyz="0.0110634 0.1580174 0.0983133"/>
+  </joint>
+
+  <link name="right_shoulder">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0039735001 -0.0000731152 0.2316491"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.0039735001 -0.0000731152 0.2316491"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.2 0.3"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0.0039735001 -0.0000731152 0.2316491"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.2 0.3"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="right_shoulder" type="spherical">
+    <parent link="right_collar"/>
+    <child link="right_shoulder"/>
+    <origin rpy="-0.2924823 -0.0819116 -0.005663" xyz="0 0 0.2303227"/>
+  </joint>
+
+  <link name="right_elbow">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0.2310696"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.2310696"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.2 0.3"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0.2310696"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.2 0.3"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="right_elbow" type="revolute">
+    <parent link="right_shoulder"/>
+    <child link="right_elbow"/>
+    <origin rpy="0 -0.2896025 0" xyz="0.007947002 -0.0001462304 0.4632983"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="1000.0" lower="0" upper="3.14" velocity="100.5"/>
+  </joint>
+
+  <link name="right_wrist">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0.15"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.15"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.1 0.3"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0.15"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.1 0.3"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="right_wrist" type="spherical">
+    <parent link="right_elbow"/>
+    <child link="right_wrist"/>
+    <origin rpy="0 0 0" xyz="0 0 0.4621392"/>
+  </joint>
+
+  <link name="left_collar">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 -0.1151613"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.1151613"/>
+      <geometry>
+        <sphere radius="0.12"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 -0.1151613"/>
+      <geometry>
+        <sphere radius="0.12"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="left_collar" type="spherical">
+    <parent link="chest"/>
+    <child link="left_collar"/>
+    <origin rpy="0 0 0.476946" xyz="0.01106291 0.1580185 -0.09831327"/>
+  </joint>
+
+  <link name="left_shoulder">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.0039735001 0.0000731152 -0.2316491"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.0039735001 0.0000731152 -0.2316491"/>
+      <geometry>
+        <box size="0.2 0.2 0.3"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="-0.0039735001 0.0000731152 -0.2316491"/>
+      <geometry>
+        <box size="0.2 0.2 0.3"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="left_shoulder" type="spherical">
+    <parent link="left_collar"/>
+    <child link="left_shoulder"/>
+    <origin rpy="-0.292482 -0.081911 -0.005664" xyz="0 0 -0.2303226"/>
+  </joint>
+
+  <link name="left_elbow">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 -0.2310696"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.2310696"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.2 0.3"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 -0.2310696"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.2 0.3"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="left_elbow" type="revolute">
+    <parent link="left_shoulder"/>
+    <child link="left_elbow"/>
+    <origin rpy="0 -0.2896025 0" xyz="-0.007947002 0.0001462304 -0.4632983"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="1000.0" lower="-3.14" upper="0." velocity="100.5"/>
+  </joint>
+
+  <link name="left_wrist">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 -0.15"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.15"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.1 0.3"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 -0.15"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.1 0.3"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="left_wrist" type="spherical">
+    <parent link="left_elbow"/>
+    <child link="left_wrist"/>
+    <origin rpy="0 0 0" xyz="0 0 -0.4621392"/>
+  </joint>
+
+  <link name="right_hip">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.01481108 0 0.1644098"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.01481108 0 0.1644098"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.2 0.27"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="-0.01481108 0 0.1644098"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.2 0.27"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="right_hip" type="spherical">
+    <parent link="root"/>
+    <child link="right_hip"/>
+    <origin rpy="1.0627272 0.3662165 -2.5752226" xyz="0.09311667 -0.09886401 0.1869414"/>
+  </joint>
+
+  <link name="right_knee">
+    <inertial>
+      <!-- <origin rpy="0 0 0" xyz="0 0 0.1588487"/> -->
+      <origin rpy="0 0 0" xyz="0 0 0.1868487"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <!-- <origin rpy="0 0 0" xyz="0 0 0.1588487"/> -->
+      <origin rpy="0 0 0" xyz="0 0 0.1868487"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.2 0.23"/>
+      </geometry>
+    </collision>
+    <visual>
+      <!-- <origin rpy="0 0 0" xyz="0 0 0.1588487"/> -->
+      <origin rpy="0 0 0" xyz="0 0 0.1868487"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.2 0.23"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="right_knee" type="revolute">
+    <parent link="right_hip"/>
+    <child link="right_knee"/>
+    <origin rpy="0 0.7504043 0" xyz="-0.02962216 0 0.3288197"/>
+    <limit effort="1000.0" lower="0" upper="3.14" velocity="100.5"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <link name="right_ankle">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.02 0 0.1"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.02 0 0"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.3 0.2 0.13"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="-0.02 0 0.1"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.3 0.2 0.13"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="right_ankle" type="spherical">
+    <parent link="right_knee"/>
+    <child link="right_ankle"/>
+    <origin rpy="0 0 0" xyz="0 0 0.3176974"/>
+  </joint>
+
+  <link name="left_hip">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.01481108 0 -0.1644098"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.01481108 0 -0.1644098"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.2 0.27"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0.01481108 0 -0.1644098"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.2 0.27"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="left_hip" type="spherical">
+    <parent link="root"/>
+    <child link="left_hip"/>
+    <origin rpy="-1.0627272 -0.3662165 0.566370" xyz="0.09311667 -0.09886401 -0.1869414"/>
+  </joint>
+
+  <link name="left_knee">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 -0.1588487"/>
+      <origin rpy="0 0 0" xyz="0 0 -0.1868487"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <!-- <origin rpy="0 0 0" xyz="0 0 -0.1588487"/> -->
+      <origin rpy="0 0 0" xyz="0 0 -0.1868487"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.2 0.23"/>
+      </geometry>
+    </collision>
+    <visual>
+      <!-- <origin rpy="0 0 0" xyz="0 0 -0.1588487"/> -->
+      <origin rpy="0 0 0" xyz="0 0 -0.1868487"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.2 0.2 0.23"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="left_knee" type="revolute">
+    <parent link="left_hip"/>
+    <child link="left_knee"/>
+    <origin rpy="0 0.7504043 0" xyz="0.02962216 0 -0.3288192"/>
+    <limit effort="1000.0" lower="0" upper="3.14" velocity="100.5"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <link name="left_ankle">
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.02 0 -0.1"/>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.02 0 -0.1"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.3 0.2 0.13"/>
+        
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="-0.02 0 -0.1"/>
+      <geometry>
+        <!-- <sphere radius="0.1"/> -->
+        <box size="0.3 0.2 0.13"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="left_ankle" type="spherical">
+    <parent link="left_knee"/>
+    <child link="left_ankle"/>
+    <origin rpy="0 0 0" xyz="0 0 -0.3176974"/>
+  </joint>
+
+</robot>
