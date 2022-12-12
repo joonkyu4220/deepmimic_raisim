@@ -226,7 +226,7 @@ class ENVIRONMENT : public RaisimGymEnv {
       if (charFileName_ == "ybot" && col == 2){
         dataGC_.coeffRef(row, col) = data - 0.15;
       }
-      if (charFileName_ == "golem_orn" && col == 2){
+      if (charFileName_ == "golem" && col == 2){
         dataGC_.coeffRef(row, col) = data - 0.12;
       }
       col++;
@@ -448,9 +448,9 @@ class ENVIRONMENT : public RaisimGymEnv {
       float zrot = std::atan2(-rShoulderOrn[2], rShoulderOrn[5]);
       float cz = std::cos(zrot/2), sz = std::sin(zrot/2), cx = std::cos(armSpread_/2), sx = std::sin(armSpread_/2);
       gcInit_[cStart_[rShoulderIdx_]] = cz * cx; gcInit_[cStart_[rShoulderIdx_] + 1] = - cz * sx; gcInit_[cStart_[rShoulderIdx_] + 2] = - sz * sx; gcInit_[cStart_[rShoulderIdx_] + 3] = sz * cx;
-      // gcInit_[cStart_[rElbowIdx_]] = 1.57;
+      gcInit_[cStart_[rElbowIdx_]] = 1.57;
       // golem
-      gcInit_[cStart_[rElbowIdx_]] = -1.57;
+      // gcInit_[cStart_[rElbowIdx_]] = -1.57;
       gcInit_[cStart_[rWristIdx_]] = 1; gcInit_[cStart_[rWristIdx_]+1] = 0; gcInit_[cStart_[rWristIdx_]+2] = 0; gcInit_[cStart_[rWristIdx_]+3] = 0;
       simChar_->setState(gcInit_, gvInit_);
 
@@ -890,6 +890,9 @@ class ENVIRONMENT : public RaisimGymEnv {
     // rWristOrnReward = exp(- rWristOrnScale_ * (2 - rWristOrn_[1] + rWristOrn_[3]));
     // ybot
     rWristOrnReward = exp(- rWristOrnScale_ * (2 - rWristOrn_[6] - rWristOrn_[5]));
+    //golem
+    // rWristOrnReward = exp(- rWristOrnScale_ * (2 - rWristOrn_[6] - rWristOrn_[5]));
+
     rewards_.record("right wrist orientation", rWristOrnReward);
 
 
@@ -993,69 +996,69 @@ class ENVIRONMENT : public RaisimGymEnv {
     // Vec<3> rHandCenter_ = {0, -0.08850, 0};
 
     // // ybot
-    // int nJoints_ = 18;
+    int nJoints_ = 18;
 
-    // int spineIdx_ = 0; // 7
-    // int spine1Idx_ = 1; // 11
-    // int spine2Idx_ = 2; // 15
-    // int neckIdx_ = 3; // 19
-    // int rCollarIdx_ = 4; // 23
-    // int rShoulderIdx_ = 5; // 27
-    // int rElbowIdx_ = 6; // 31
-    // int rWristIdx_ = 7; // 32
-    // int lCollarIdx_ = 8; // 36
-    // int lShoulderIdx_ = 9; // 40
-    // int lElbowIdx_ = 10; // 44
-    // int lWristIdx_ = 11; // 45
-    // int rHipIdx_ = 12; // 49
-    // int rKneeIdx_ = 13; // 53
-    // int rAnkleIdx_ = 14; // 54
-    // int lHipIdx_ = 15; // 58
-    // int lKneeIdx_ = 16; // 62
-    // int lAnkleIdx_ = 17; // 63
+    int spineIdx_ = 0; // 7
+    int spine1Idx_ = 1; // 11
+    int spine2Idx_ = 2; // 15
+    int neckIdx_ = 3; // 19
+    int rCollarIdx_ = 4; // 23
+    int rShoulderIdx_ = 5; // 27
+    int rElbowIdx_ = 6; // 31
+    int rWristIdx_ = 7; // 32
+    int lCollarIdx_ = 8; // 36
+    int lShoulderIdx_ = 9; // 40
+    int lElbowIdx_ = 10; // 44
+    int lWristIdx_ = 11; // 45
+    int rHipIdx_ = 12; // 49
+    int rKneeIdx_ = 13; // 53
+    int rAnkleIdx_ = 14; // 54
+    int lHipIdx_ = 15; // 58
+    int lKneeIdx_ = 16; // 62
+    int lAnkleIdx_ = 17; // 63
 
-    // int cStart_[18] = {7, 11, 15, 19, 23, 27, 31, 32, 36, 40, 44, 45, 49, 53, 54, 58, 62, 63};
-    // int cDim_[18] = {4, 4, 4, 4, 4, 4, 1, 4, 4, 4, 1, 4, 4, 1, 4, 4, 1, 4};
-    // int vStart_[18] = {6,  9, 12, 15, 18, 21, 24, 25, 28, 31, 34, 35, 38, 41, 42, 45, 48, 49};
-    // int vDim_[18] = {3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 1, 3, 3, 1, 3, 3, 1, 3};
-    // int isEE_[18] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1};
-    // int isMask_[18] = {0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int cStart_[18] = {7, 11, 15, 19, 23, 27, 31, 32, 36, 40, 44, 45, 49, 53, 54, 58, 62, 63};
+    int cDim_[18] = {4, 4, 4, 4, 4, 4, 1, 4, 4, 4, 1, 4, 4, 1, 4, 4, 1, 4};
+    int vStart_[18] = {6,  9, 12, 15, 18, 21, 24, 25, 28, 31, 34, 35, 38, 41, 42, 45, 48, 49};
+    int vDim_[18] = {3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 1, 3, 3, 1, 3, 3, 1, 3};
+    int isEE_[18] = {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1};
+    int isMask_[18] = {0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-    // int rotationType_[18] = {0, 0, 0, 0, 0, 4, 10, 5, 0, 4, 10, 5, 2, 10, 0, 2, 10, 0};
+    int rotationType_[18] = {0, 0, 0, 0, 0, 4, 10, 5, 0, 4, 10, 5, 2, 10, 0, 2, 10, 0};
 
-    // Vec<3> rHandCenter_ = {0, 0, 0.08850};
+    Vec<3> rHandCenter_ = {0, 0, 0.08850};
 
     // golem
-    int nJoints_ = 17;
+    // int nJoints_ = 17;
 
-    int backIdx_ = 0;
-    int chestIdx_ = 1;
-    int neckIdx_ = 2;
-    int rCollarIdx_ = 3;
-    int rShoulderIdx_ = 4;
-    int rElbowIdx_ = 5;
-    int rWristIdx_ = 6;
-    int lCollarIdx_ = 7;
-    int lShoulderIdx_ = 8;
-    int lElbowIdx_ = 9;
-    int lWristIdx_ = 10;
-    int rHipIdx_ = 11;
-    int rKneeIdx_ = 12;
-    int rAnkleIdx_ = 13;
-    int lHipIdx_ = 14;
-    int lKneeIdx_ = 15;
-    int lAnkleIdx_ = 16;
+    // int backIdx_ = 0;
+    // int chestIdx_ = 1;
+    // int neckIdx_ = 2;
+    // int rCollarIdx_ = 3;
+    // int rShoulderIdx_ = 4;
+    // int rElbowIdx_ = 5;
+    // int rWristIdx_ = 6;
+    // int lCollarIdx_ = 7;
+    // int lShoulderIdx_ = 8;
+    // int lElbowIdx_ = 9;
+    // int lWristIdx_ = 10;
+    // int rHipIdx_ = 11;
+    // int rKneeIdx_ = 12;
+    // int rAnkleIdx_ = 13;
+    // int lHipIdx_ = 14;
+    // int lKneeIdx_ = 15;
+    // int lAnkleIdx_ = 16;
 
-    int cStart_[17] = {7, 11, 15, 19, 23, 27, 28, 32, 36, 40, 41, 45, 49, 50, 54, 58, 59};
-    int cDim_[17] = {4, 4, 4, 4, 4, 1, 4, 4, 4, 1, 4, 4, 1, 4, 4, 1, 4};
-    int vStart_[17] = {6, 9, 12, 15, 18, 21, 22, 25, 28, 31, 32, 35, 38, 39, 42, 45, 46};
-    int vDim_[17] = {3, 3, 3, 3, 3, 1, 3, 3, 3, 1, 3, 3, 1, 3, 3, 1, 3};
-    int isEE_[17] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1};
-    int isMask_[17] = {0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    // int cStart_[17] = {7, 11, 15, 19, 23, 27, 28, 32, 36, 40, 41, 45, 49, 50, 54, 58, 59};
+    // int cDim_[17] = {4, 4, 4, 4, 4, 1, 4, 4, 4, 1, 4, 4, 1, 4, 4, 1, 4};
+    // int vStart_[17] = {6, 9, 12, 15, 18, 21, 22, 25, 28, 31, 32, 35, 38, 39, 42, 45, 46};
+    // int vDim_[17] = {3, 3, 3, 3, 3, 1, 3, 3, 3, 1, 3, 3, 1, 3, 3, 1, 3};
+    // int isEE_[17] = {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1};
+    // int isMask_[17] = {0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-    int rotationType_[18] = {0, 0, 0, 0, 0, 10, 0, 0, 0, 10, 0, 0, 10, 0, 0, 10, 0};
+    // int rotationType_[18] = {0, 0, 0, 0, 0, 10, 0, 0, 0, 10, 0, 0, 10, 0, 0, 10, 0};
 
-    Vec<3> rHandCenter_ = {0, 0, 0.15};
+    // Vec<3> rHandCenter_ = {0, 0, 0.15};
 
     Vec<3> rightHandPos_;
 

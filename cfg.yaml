@@ -2,7 +2,7 @@ seed: 1
 record_video: yes # yes
 
 environment:
-  experiment name: "20221212_golem_idle2"
+  experiment name: "20221212_ybot_walkingbackwards"
   
   render: True
   num_envs: 800
@@ -13,15 +13,15 @@ environment:
   max_time: 100.0
 
   character:
-    file name: "golem_orn"
+    file name: "ybot"
     visualize kinematic: False
     restitution: 0.1
     # arm spread: -0.785398 #-0.523599 #0.785398
     arm spread: -0.785398
 
   motion data:
-    file name: "golem_idle"
-    num frames: 180
+    file name: "ybot_walkingbackwards"
+    num frames: 36
     has wrist: True
     fps: 30
     preprocess: True
@@ -74,7 +74,7 @@ environment:
     #   coeff: 0.05
 
     orientation:
-      coeff: 0.65
+      coeff: 0.8
     velocity:
       coeff: 0.0
     end effector:
@@ -82,13 +82,13 @@ environment:
     com:
       coeff: 0.0
     contact:
-      coeff: 0.1
+      coeff: 0.05
     hand ball distance:
       coeff: 0.05
     root ball distance:
       coeff: 0.0
     energy efficiency:
-      coeff: 0.15
+      coeff: 0.05
     root ball velocity:
       coeff: 0.0
     right wrist orientation:
