@@ -20,7 +20,7 @@ if __name__ == '__main__':
     task_path = os.path.dirname(os.path.realpath(__file__))
     home_path = task_path + "/../../../../.."
 
-    model_path = task_path + "/stats/20221126_rundribble"
+    model_path = task_path + "/stats/20221129_rundribble"
 
     # config
     cfg = YAML().load(open(model_path + "/cfg.yaml", 'r'))
@@ -34,8 +34,9 @@ if __name__ == '__main__':
     num_outputs = env.action_space.shape[0]
     # model = ActorCriticNetMann(num_inputs, num_outputs, [128, 128])
     model = ActorCriticNet(num_inputs, num_outputs, [128, 128])
-    checkpoint = torch.load(model_path + "/iter.pt")
-    model.load_state_dict(checkpoint["model_architecture_state_dict"])
+    
+    checkpoint = torch.load(model_path + "/iter_17.pt")
+    model.load_state_dict(checkpoint['model_architecture_state_dict'])
     model.cuda()
 
     env.setTask()

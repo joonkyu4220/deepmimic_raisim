@@ -341,8 +341,8 @@ class RL(object):
 
         # save that file into other folder
         new_dir = "iter" + str(iterations)
-        if  not(new_dir in os.listdir(checkpoint)):
-            os.mkdir(checkpoint + new_dir)
+        # if not(new_dir in os.listdir(checkpoint)):
+        os.makedirs(checkpoint + new_dir)
         
         shutil.copy2(tb_dir + lfile, checkpoint + new_dir + "/" + lfile)
 
@@ -411,7 +411,7 @@ class RL(object):
             print("update policy time", time.time()-start)
             print("iteration time", iterations, time.time()-iteration_start)
     
-            if (iterations % 1000) == 999:
+            if (iterations % 1000) == 9999:
                 self.save_params(self.model_name + "/iter"+ str(iterations + 1) + '.pt', iterations)
                 #    plt.savefig(self.model_name+"test.png")
     
@@ -443,6 +443,7 @@ if __name__ == '__main__':
     import torch.utils.data
     from model import ActorCriticNet, ActorCriticNetMann
     from torch.utils.tensorboard import SummaryWriter
+    import shutil
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -457,8 +458,15 @@ if __name__ == '__main__':
     task_path = os.path.dirname(os.path.realpath(__file__))
     home_path = task_path + "/../../../../.."
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-m', '--mode', help='set mode either train or test', type=str, default='train')
+    parser.add_argument('-w', '--weight', help='pre-trained weight path (env/envs/deepmimic/stats/$(WRITE_PTFILE_NAME))', type=str, default='')
+    args = parser.parse_args()
+    mode = args.mode
+
     # config
     cfg = YAML().load(open(task_path + "/cfg.yaml", 'r'))
+    
 
     # create environment from the configuration file
     env = VecEnv(deepmimic.RaisimGymEnv(home_path + "/rsc", dump(cfg['environment'], Dumper=RoundTripDumper)), cfg['environment'])
@@ -470,13 +478,25 @@ if __name__ == '__main__':
     
     ppo.model_name = task_path + "/stats/" + cfg["environment"]["experiment name"] + "/"
 
-    ppo.writer = SummaryWriter(log_dir=ppo.model_name + "tensorboard")
+    tb_dir = ppo.model_name + "tensorboard"
+
+    ppo.writer = SummaryWriter(log_dir = tb_dir)
+    
+    start_iteration_number = 0
+    weight_path = task_path + "/stats/" + cfg["environment"]["experiment name"] + "/" + args.weight
+
+    if mode == 'retrain':
+        ppo.actor_optimizer = optim.Adam([*ppo.gpu_model.parameters()], lr = ppo.lr)
+        ppo.critic_optimizer = optim.Adam([*ppo.gpu_model.parameters()], lr = 10 * ppo.lr)
+
+        load_params(weight_path, env, ppo)
+        start_iteration_number = reload_tb(tb_dir)
     
     if not(os.path.isdir(ppo.model_name)):
         os.mkdir(ppo.model_name)
-    import shutil
+    
     shutil.copy(task_path + "/cfg.yaml", ppo.model_name + "cfg.yaml")
 
     training_start = time.time()
-    ppo.collect_samples_multithread()
+    ppo.collect_samples_multithread(start_iteration_number + 1)
     print("training time", time.time()-training_start)
