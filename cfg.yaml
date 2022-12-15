@@ -2,7 +2,7 @@ seed: 1
 record_video: yes # yes
 
 environment:
-  experiment name: "20221213_golem_idle"
+  experiment name: "20221215_humanoid_run"
   
   render: True
   num_envs: 800
@@ -13,16 +13,16 @@ environment:
   max_time: 100.0
 
   character:
-    file name: "golem"
+    file name: "humanoid_dribble"
     visualize kinematic: False
     restitution: 0.1
     # arm spread: -0.785398 #-0.523599 #0.785398
-    arm spread: -0.785398
+    arm spread: 0.523599
 
   motion data:
-    file name: "golem_idle"
-    num frames: 180
-    has wrist: True
+    file name: "run"
+    num frames: 25
+    has wrist: False
     fps: 30
     preprocess: True
     
@@ -74,7 +74,7 @@ environment:
     #   coeff: 0.05
 
     orientation:
-      coeff: 0.75
+      coeff: 0.7
     velocity:
       coeff: 0.0
     end effector:
@@ -86,15 +86,15 @@ environment:
     hand ball distance:
       coeff: 0.05
     root ball distance:
-      coeff: 0.0
+      coeff: 0.05
     energy efficiency:
-      coeff: 0.1
+      coeff: 0.05
     root ball velocity:
       coeff: 0.0
     right wrist orientation:
       coeff: 0.05
     root ball angle:
-      coeff: 0.0
+      coeff: 0.05
 
 
     # orientation:
