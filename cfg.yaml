@@ -2,7 +2,7 @@ seed: 1
 record_video: yes # yes
 
 environment:
-  experiment name: "20221215_humanoid_run"
+  experiment name: "20230201_run_nocontactdistance"
   
   render: True
   num_envs: 800
@@ -16,8 +16,7 @@ environment:
     file name: "humanoid_dribble"
     visualize kinematic: False
     restitution: 0.1
-    # arm spread: -0.785398 #-0.523599 #0.785398
-    arm spread: 0.523599
+    arm spread: 0.785398
 
   motion data:
     file name: "run"
@@ -28,97 +27,27 @@ environment:
     
   phase usage:
     character: True
-    ball: True # True
+    ball: True
 
   task:
-    dribble: True # True
-    ball state: True # True
-    mask: True # True
-    desired root-ball distance: 0.25
-    desired root-ball angle: 0.785398
+    dribble: True
+    ball state: True
+    mask: True
 
   error sensitivity:
-    orientation: 2
-    velocity: 0.1
-    end effector: 40
-    com: 10
-    energy efficiency: 0.01
-    root ball distance: 1
+    orientation: 1
     hand ball distance: 1
-    root ball velocity: 1
     right wrist orientation: 1
-    root ball angle: 1
 
   reward:
-    # orientation:
-    #   coeff: 0.6
-    # velocity:
-    #   coeff: 0.0
-    # end effector:
-    #   coeff: 0.0
-    # com:
-    #   coeff: 0.0
-    # contact:
-    #   coeff: 0.05
-    # hand ball distance:
-    #   coeff: 0.05
-    # root ball distance:
-    #   coeff: 0.15
-    # energy efficiency:
-    #   coeff: 0.0
-    # root ball velocity:
-    #   coeff: 0.05
-    # right wrist orientation:
-    #   coeff: 0.05
-    # root ball angle:
-    #   coeff: 0.05
-
     orientation:
-      coeff: 0.7
-    velocity:
-      coeff: 0.0
-    end effector:
-      coeff: 0.0
-    com:
-      coeff: 0.0
+      coeff: 0.8
     contact:
-      coeff: 0.05
-    hand ball distance:
-      coeff: 0.05
-    root ball distance:
-      coeff: 0.05
-    energy efficiency:
-      coeff: 0.05
-    root ball velocity:
       coeff: 0.0
+    hand ball distance:
+      coeff: 0.1
     right wrist orientation:
-      coeff: 0.05
-    root ball angle:
-      coeff: 0.05
-
-
-    # orientation:
-    #   coeff: 1.0
-    # velocity:
-    #   coeff: 0.0
-    # end effector:
-    #   coeff: 0.0
-    # com:
-    #   coeff: 0.0
-    # contact:
-    #   coeff: 0.0
-    # hand ball distance:
-    #   coeff: 0.0
-    # root ball distance:
-    #   coeff: 0.0
-    # energy efficiency:
-    #   coeff: 0.0
-    # root ball velocity:
-    #   coeff: 0.0
-    # right wrist orientation:
-    #   coeff: 0.0
-    # root ball angle:
-    #   coeff: 0.0
+      coeff: 0.1
 
 
 architecture:

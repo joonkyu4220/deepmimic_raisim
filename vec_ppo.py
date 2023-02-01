@@ -411,7 +411,7 @@ class RL(object):
             print("update policy time", time.time()-start)
             print("iteration time", iterations, time.time()-iteration_start)
     
-            if (iterations % 1000) == 9999:
+            if (iterations % 1000) == 999:
                 self.save_params(self.model_name + "/iter"+ str(iterations + 1) + '.pt', iterations)
                 #    plt.savefig(self.model_name+"test.png")
     

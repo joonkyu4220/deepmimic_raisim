@@ -9,6 +9,8 @@
 #include <vector>
 #include <math.h>
 
+#include <queue>
+
 namespace raisim {
 
 class ENVIRONMENT : public RaisimGymEnv {
@@ -22,12 +24,16 @@ class ENVIRONMENT : public RaisimGymEnv {
       setBall();
       setData();
       setAgent(cfg);
+
+      setCam(); 
     }
 
   void init() final {}
 
   void setup(const Yaml::Node& cfg){
     // EXPERIMENT SETTINGS
+    useCam_ = cfg["use_cam"].template As<bool>();
+
     charFileName_ = cfg["character"]["file name"].template As<std::string>();
     visKin_ = cfg["character"]["visualize kinematic"].template As<bool>();
     restitution_ = cfg["character"]["restitution"].template As<float>();
@@ -46,23 +52,12 @@ class ENVIRONMENT : public RaisimGymEnv {
     useBallPhase_ = cfg["phase usage"]["ball"].template As<bool>();
 
     ornScale_ = cfg["error sensitivity"]["orientation"].template As<float>();
-    velScale_ = cfg["error sensitivity"]["velocity"].template As<float>();
-    eeScale_ = cfg["error sensitivity"]["end effector"].template As<float>();
-    comScale_ = cfg["error sensitivity"]["com"].template As<float>();
-    energyScale_ = cfg["error sensitivity"]["energy efficiency"].template As<float>();
     handBallDistScale_ = cfg["error sensitivity"]["hand ball distance"].template As<float>();
-    rootBallDistScale_ = cfg["error sensitivity"]["root ball distance"].template As<float>();
-    rootBallVelScale_ = cfg["error sensitivity"]["root ball velocity"].template As<float>();
     rWristOrnScale_ = cfg["error sensitivity"]["right wrist orientation"].template As<float>();
 
     dribble_ = cfg["task"]["dribble"].template As<bool>();
     useBallState_ = cfg["task"]["ball state"].template As<bool>();
     mask_ = cfg["task"]["mask"].template As<bool>();
-    desiredRootBallDist_ = cfg["task"]["desired root-ball distance"].template As<double>();
-
-
-    desiredRootBallAng_ = cfg["task"]["desired root-ball angle"].template As<double>();
-    rootBallAngleScale_ = cfg["error sensitivity"]["root ball angle"].template As<float>();
   }
 
   void setWorld(){
@@ -102,31 +97,6 @@ class ENVIRONMENT : public RaisimGymEnv {
     
     com_.setZero(comDim_); comRef_.setZero(comDim_);
     ee_.setZero(eeDim_); eeRef_.setZero(eeDim_);
-
-    // std::vector<Vec<2>> jointLimits = simChar_->getJointLimits();
-    // Vec<2> sphericalJointLimit = {-1.9, 1.9};
-    // int limitIdx = 6;
-    // for (int jointIdx=0; jointIdx<nJoints_; jointIdx++){
-    //   if (vDim_[jointIdx] == 3){
-    //     jointLimits[limitIdx][0] = sphericalJointLimit[0];
-    //     jointLimits[limitIdx][1] = sphericalJointLimit[1];
-    //   }
-    //   else{
-    //   }
-    //   limitIdx += vDim_[jointIdx];
-    // }
-    // for (int idx=0; idx<jointLimits.size(); idx++){
-    //   std::cout << jointLimits[idx] << std::endl;
-    // }
-    // simChar_->setJointLimits(jointLimits);
-    // std::cout << "===========================================================" << std::endl;
-    // // for (int idx=0; idx <simChar_->getJointLimits().size(); idx++)
-    // //   std::cout << simChar_->getJointLimits()[idx] << std::endl;
-    // std::cout << simChar_->getJointLimits()[vStart_[rElbowIdx_]] << std::endl;
-    // std::cout << simChar_->getJointLimits()[vStart_[lElbowIdx_]] << std::endl;
-    // std::cout << simChar_->getJointLimits()[vStart_[rKneeIdx_]] << std::endl;
-    // std::cout << simChar_->getJointLimits()[vStart_[lKneeIdx_]] << std::endl;
-    // std::cout << "===========================================================" << std::endl;
   }
 
   void setController(){
@@ -372,7 +342,7 @@ class ENVIRONMENT : public RaisimGymEnv {
       }
     }
 
-    // TODO: integrate loop transformation code
+    // TODO: integrate loop transformation
     std::ifstream loopdispfile(resourceDir_ + "/" + motionFileName_ + "_loop_disp.txt");
     row = 0, col = 0;
     loopDisplacement_.setZero();
@@ -393,6 +363,21 @@ class ENVIRONMENT : public RaisimGymEnv {
     raisim::quatToRotMat(loop_turn_quat, loopTurn_);
   }
 
+  void setCam(){
+    if (useCam_){
+      focus_ = world_->addArticulatedSystem(resourceDir_ + "/focus.urdf"); 
+      focus_->setName("focus");
+      focusGC_.setZero(7); focusGV_.setZero(6);
+      focusGC_[2] = 1; focusGC_[3] = 1;
+      focus_->setState(focusGC_, focusGV_);
+
+      camGC_.setZero();
+      camDisplacement_.setZero();
+      camDirection_.setZero();
+      camDisplacement_[0] = 3; camDisplacement_[1] = 0; camDisplacement_[2] = 1;
+    }
+  }
+
   void reset() final {
 
     sim_step_ = 0;
@@ -407,7 +392,20 @@ class ENVIRONMENT : public RaisimGymEnv {
     // flags
     resetFlags();
 
+    std::queue<double> xempty, yempty;
+    std::swap(xqueue_, xempty);
+    std::swap(yqueue_, yempty);
+
+
+    for (int i=0; i<camWindow_; i++){
+      xqueue_.push(gcInit_[0]);
+      yqueue_.push(gcInit_[1]);
+    }
+    xave_ = gcInit_[0];
+    yave_ = gcInit_[1];
+
     updateObservation();
+    
   }
 
   void initializeCharacter(){
@@ -489,7 +487,6 @@ class ENVIRONMENT : public RaisimGymEnv {
       ballGCInit_[0] = 0; ballGCInit_[1] = 100; ballGCInit_[2] = 5; ballGCInit_[3] = 1;
     }
     ball_->setState(ballGCInit_, ballGVInit_);
-    
   }
 
   void resetFlags(){
@@ -580,6 +577,29 @@ class ENVIRONMENT : public RaisimGymEnv {
     Mat<3, 3> rWristOrn;
     simChar_->getFrameOrientation("right_wrist", rWristOrn);
     raisim::matmul(rootRotInv, rWristOrn, rWristOrn_);
+
+    if (useCam_ && server_){
+      xave_ = xave_ * camWindow_ - xqueue_.front() + gc_[0];
+      xave_ /= camWindow_;
+      yave_ = yave_ * camWindow_ - yqueue_.front() + gc_[1];
+      yave_ /= camWindow_;
+      xqueue_.push(gc_[0]);
+      xqueue_.pop();
+      yqueue_.push(gc_[1]);
+      yqueue_.pop();
+
+      Vec<3> camDisplacement;
+      raisim::matTransposevecmul(rootRotInv, camDisplacement_, camDisplacement);
+      
+      focusGC_.head(2) = gc_.head(2);
+      focusGV_.head(3) = gv_.head(3);
+      focus_->setState(focusGC_, focusGV_);
+      camGC_[0] = focusGC_[0]; camGC_[1] = focusGC_[1]; camGC_[2] = focusGC_[2];
+      camGC_[0] = xave_; camGC_[1] = yave_; camGC_[2] = focusGC_[2];
+      // server_->setCameraPositionAndLookAt(camGC_ + camDisplacement.e(), -camDisplacement.e());
+      server_->setCameraPositionAndLookAt(camGC_ + camDisplacement_.e(), focusGC_);
+    }
+
   }
 
   void getRootTransform(Mat<3,3>& rot, Vec<3>& pos) {
@@ -640,7 +660,7 @@ class ENVIRONMENT : public RaisimGymEnv {
         checkBallContact();
       }
       
-      checkCharacterContact();
+      // checkCharacterContact();
     }
 
     setBallPhaseSpeed();
@@ -762,7 +782,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     if (isHand_){
       ballPhase_ = M_PI;
       float v = - std::abs(ballGV_[2]);
-      float h = std::abs(ballGC_[2]);
+      float h = std::abs(ballGC_[2]) - 0.11;
       float g = std::abs(world_->getGravity()[2]);
       float t = (std::sqrt(v * v + 2 * g * h) - v) / g;
       ballPhaseSpeed_ = M_PI / (t / control_dt_);
@@ -793,9 +813,6 @@ class ENVIRONMENT : public RaisimGymEnv {
     
     // imitation reward
     double ornErr = 0, ornReward = 0;
-    double velErr = 0, velReward = 0;
-    double eeErr = 0, eeReward = 0;
-    double comErr = 0, comReward = 0;
 
     Vec<4> quat, quatRef, quatErr;
     Mat<3,3> mat, matRef, matErr;
@@ -825,32 +842,7 @@ class ENVIRONMENT : public RaisimGymEnv {
     ornReward = exp(-ornScale_ * ornErr);
     rewards_.record("orientation", ornReward);
 
-    if (mask_){
-      velErr = (gv_.segment(0, vStart_[rShoulderIdx_]) - gvRef_.segment(0, vStart_[rShoulderIdx_])).squaredNorm();
-      velErr += (gv_.tail(gvDim_ - (vStart_[rWristIdx_] + vDim_[rWristIdx_])) - gvRef_.tail(gvDim_ - (vStart_[rWristIdx_] + vDim_[rWristIdx_]))).squaredNorm();
-    }
-    else{
-      velErr = (gv_.tail(controlDim_) - gvRef_.tail(controlDim_)).squaredNorm();
-    }
-    velReward = exp(- velScale_ * velErr);
-    rewards_.record("velocity", velReward);
 
-    if (mask_){
-      eeErr = (ee_.segment(3, eeDim_ - 3) - eeRef_.segment(3, eeDim_ - 3)).squaredNorm();
-    }
-    else{
-      eeErr = (ee_ - eeRef_).squaredNorm();
-    }
-    eeReward = exp(- eeScale_ * eeErr);
-    rewards_.record("end effector", eeReward);
-
-    comRef_ = loopTurnAccumulated_ * comRef_;
-    comRef_ = comRef_ + loopDisplacementAccumulated_.e();
-
-    comErr = (com_ - comRef_).squaredNorm();
-    comReward = exp(-comScale_ * comErr);
-    rewards_.record("com", comReward);
-    
     double contactReward = 0;
     if (groundHand_) {
       contactReward = 1;
@@ -867,23 +859,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     double rootDistReward = 0;
     if (dribble_){
       handDistReward += exp(-handBallDistScale_ * handBallDist_);
-      rootBallDist_ = std::sqrt(rootBallDist_);
-      rootBallDist_ = std::max(desiredRootBallDist_, rootBallDist_) - desiredRootBallDist_;
-
-      rootDistReward += exp(-rootBallDistScale_ * rootBallDist_);
     }
     rewards_.record("hand ball distance", handDistReward);
-    rewards_.record("root ball distance", rootDistReward);
-
-    double rootVelReward = 0;
-    rootVelReward += exp(-rootBallVelScale_ * (gv_.head(2) - ballGV_.head(2)).squaredNorm());
-
-    rewards_.record("root ball velocity", rootVelReward);
-
-    double energyReward = 0;
-    energyReward += exp(- energyScale_ * (prevGV_ - gv_).squaredNorm());
-    rewards_.record("energy efficiency", energyReward);
-
 
     double rWristOrnReward = 0;
     // humanoid
@@ -892,13 +869,8 @@ class ENVIRONMENT : public RaisimGymEnv {
     // rWristOrnReward = exp(- rWristOrnScale_ * (2 - rWristOrn_[6] - rWristOrn_[5]));
     //golem
     // rWristOrnReward = exp(- rWristOrnScale_ * (2 - rWristOrn_[6] - rWristOrn_[5]));
-
     rewards_.record("right wrist orientation", rWristOrnReward);
 
-
-    double rootBallAngleReward = 0;
-    rootBallAngleReward = exp(- rootBallAngleScale_ * std::abs(desiredRootBallAng_ - rootBallAngle_));
-    rewards_.record("root ball angle", rootBallAngleReward);
   }
   
   void observe(Eigen::Ref<EigenVec> ob) final {
@@ -958,8 +930,22 @@ class ENVIRONMENT : public RaisimGymEnv {
     float armSpread_ = M_PI / 4;
 
     bool visualizable_ = false;
+    
+    bool useCam_ = false;
     raisim::ArticulatedSystem *simChar_, *kinChar_;
     raisim::ArticulatedSystem *ball_;
+    raisim::ArticulatedSystem *focus_;
+    Eigen::VectorXd focusGC_, focusGV_;
+    // Eigen::Vector3d camDisplacement_, camDirection_;
+    Vec<3> camDisplacement_, camDirection_;
+    Eigen::Vector3d camGC_;
+    
+
+    std::queue<double> xqueue_;
+    std::queue<double> yqueue_;
+    double xave_;
+    double yave_;
+    size_t camWindow_ = 30;
 
     float restitution_;
 
@@ -1062,6 +1048,8 @@ class ENVIRONMENT : public RaisimGymEnv {
 
     int gcDim_, gvDim_, controlDim_, ballGCDim_, ballGVDim_;
     int posDim_ = 3 * nJoints_, comDim_ = 3, eeDim_ = 12;
+
+    
 
     Eigen::VectorXd gc_, gv_, gcInit_, gvInit_, gcRef_, gvRef_;
     Eigen::VectorXd prevGV_;
